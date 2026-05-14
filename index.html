@@ -83,19 +83,19 @@ const C = {
   soft:"#FFF1EC", g100:"#F5F5F3", g200:"#E8E8E4", g400:"#9A9A94", g600:"#5A5A54",
 };
 
-const JOB_TAGS = ["#바리스타","#행정보조","#원예","#세탁","#포장작업","#누룽지생산","#뻥과자생산","#급식보조","#휠마스터","#서비스","#예술"];
+const JOB_TAGS = ["#바리스타","#티마스터","#스피치","#누룽지생산","#뻥과자생산","#휠마스터","#운동화 세탁","#원예재배","#청소","#삼오전자","#예술"];
 const JOB_META = {
-  "#바리스타":   {color:"#8B4513",emoji:"☕"},
-  "#행정보조":   {color:"#1B5E20",emoji:"📋"},
-  "#원예":       {color:"#2E7D32",emoji:"🌱"},
-  "#세탁":       {color:"#6A1B9A",emoji:"👕"},
-  "#포장작업":   {color:"#4527A0",emoji:"📦"},
-  "#누룽지생산": {color:"#C17F24",emoji:"🍚"},
-  "#뻥과자생산": {color:"#D4631A",emoji:"🫓"},
-  "#급식보조":   {color:"#2E7D5A",emoji:"🍱"},
-  "#휠마스터":   {color:"#1A5276",emoji:"♿"},
-  "#서비스":     {color:"#00838F",emoji:"🤝"},
-  "#예술":       {color:"#AD1457",emoji:"🎨"},
+  "#바리스타":    {color:"#8B4513",emoji:"☕"},
+  "#티마스터":    {color:"#00695C",emoji:"🫖"},
+  "#스피치":      {color:"#6A1B9A",emoji:"🎤"},
+  "#누룽지생산":  {color:"#C17F24",emoji:"🍚"},
+  "#뻥과자생산":  {color:"#D4631A",emoji:"🫓"},
+  "#휠마스터":    {color:"#1A5276",emoji:"♿"},
+  "#운동화 세탁": {color:"#4527A0",emoji:"👟"},
+  "#원예재배":    {color:"#2E7D32",emoji:"🌱"},
+  "#청소":        {color:"#0277BD",emoji:"🧹"},
+  "#삼오전자":    {color:"#37474F",emoji:"🔌"},
+  "#예술":        {color:"#AD1457",emoji:"🎨"},
 };
 const AVATARS = ["👩","👦","👧","🧑","👨","👩‍🦱","👦🏽","👧🏻","🧑🏾","👨🏼"];
 
@@ -508,7 +508,6 @@ function App() {
     const newUser={id:"u"+Date.now(),name:formName.trim(),school:formSchool.trim(),avatar:formAvatar,pic:formPic};
     await FB.set(`users/${newUser.id}`, newUser);
     setCurrentUser(newUser); setUserType("student"); setScreen("main");
-    saveToLocalAccounts(newUser);
     toast(`🎉 환영해요, ${newUser.name}님!`);
   };
 
@@ -519,7 +518,6 @@ function App() {
     const found = users.find(u=>u.name===formName.trim()&&u.school===(formSchool.trim()||""));
     if(!found) { toast("❌ 일치하는 계정이 없어요. 새로 가입해주세요!"); return; }
     setCurrentUser(found); setUserType("student"); setScreen("main");
-    saveToLocalAccounts(found);
     toast(`👋 반가워요, ${found.name}님!`);
   };
 
@@ -585,7 +583,6 @@ function App() {
     const updated={...currentUser,name:stName,school:stSchool,avatar:stAvatar,pic:stPic};
     await FB.set(`users/${updated.id}`, updated);
     setCurrentUser(updated);
-    saveToLocalAccounts(updated);
     setPosts(p=>p.map(post=>post.userId===updated.id?{...post,name:updated.name,school:updated.school,avatar:updated.avatar,profilePic:updated.pic}:post));
     const myPosts = posts.filter(p=>p.userId===updated.id);
     await Promise.all(myPosts.map(p=>FB.update(`posts/${p.id}`,{name:updated.name,school:updated.school,avatar:updated.avatar,profilePic:updated.pic})));
@@ -653,6 +650,31 @@ function App() {
     }
   };
 
+  /* ── 댓글 삭제 ── */
+  const handleCommentDelete = async (postId, commentIdx) => {
+    const post = posts.find(p=>p.id===postId);
+    if(!post) return;
+    const newCommentList = (post.commentList||[]).filter((_,i)=>i!==commentIdx);
+    setPosts(prev=>prev.map(p=>p.id===postId?{...p,commentList:newCommentList}:p));
+    setCommentModal(prev=>prev&&prev.id===postId?{...prev,commentList:newCommentList}:prev);
+    if(detail?.id===postId) setDetail(d=>({...d,commentList:newCommentList}));
+    await FB.update(`posts/${postId}`,{commentList:newCommentList});
+    toast("🗑️ 댓글이 삭제됐어요.");
+  };
+
+  /* ── 댓글 수정 ── */
+  const handleCommentEdit = async (postId, commentIdx, newText) => {
+    const post = posts.find(p=>p.id===postId);
+    if(!post) return;
+    const newCommentList = (post.commentList||[]).map((c,i)=>
+      i===commentIdx ? {...c, text:newText, edited:true} : c
+    );
+    setPosts(prev=>prev.map(p=>p.id===postId?{...p,commentList:newCommentList}:p));
+    setCommentModal(prev=>prev&&prev.id===postId?{...prev,commentList:newCommentList}:prev);
+    if(detail?.id===postId) setDetail(d=>({...d,commentList:newCommentList}));
+    await FB.update(`posts/${postId}`,{commentList:newCommentList});
+  };
+
   /* ✅ FIX 4: 댓글 제출 - 알림 저장 추가 */
   const handleCommentSubmit = async (postId, comment) => {
     const post = posts.find(p=>p.id===postId);
@@ -680,18 +702,17 @@ function App() {
     }
   };
 
-  /* ── 이 기기에 저장된 계정 (localStorage) ── */
-  const [savedUsers,setSavedUsers] = useState(()=>LS.get("dc_local_accounts",[]));
-
-  // 로그인 성공 시 이 기기 계정 목록에 추가/갱신
-  const saveToLocalAccounts = (user) => {
-    setSavedUsers(prev => {
-      const filtered = prev.filter(u => u.id !== user.id);
-      const updated = [user, ...filtered]; // 최근 로그인 순
-      LS.set("dc_local_accounts", updated);
-      return updated;
-    });
-  };
+  /* ── 가입된 계정 목록 (Firebase 전체) ── */
+  const [savedUsers,setSavedUsers] = useState([]);
+  const [savedUsersLoading,setSavedUsersLoading] = useState(false);
+  useEffect(()=>{
+    if(screen!=="login") return;
+    setSavedUsersLoading(true);
+    FB.get("users").then(data=>{
+      setSavedUsers(data ? Object.values(data) : []);
+      setSavedUsersLoading(false);
+    }).catch(()=>setSavedUsersLoading(false));
+  },[screen]);
 
   /* ══ SPLASH ══ */
   if(screen==="splash") return (
@@ -728,12 +749,17 @@ function App() {
           </div>
           {loginTab==="existing" ? (
             <>
-              {savedUsers.length>0 ? (
+              {savedUsersLoading ? (
+                <div style={{textAlign:"center",padding:"22px 0",color:C.g400}}>
+                  <div style={{display:"inline-block",width:20,height:20,border:`3px solid ${C.g200}`,borderTopColor:C.primary,borderRadius:"50%",animation:"spin 0.8s linear infinite",marginBottom:6}}/>
+                  <div style={{fontSize:12}}>계정 불러오는 중...</div>
+                </div>
+              ) : savedUsers.length>0 ? (
                 <div style={{marginBottom:14}}>
-                  <div style={{fontSize:11,color:C.g400,marginBottom:8,fontWeight:600}}>📱 이 기기에 저장된 계정</div>
+                  <div style={{fontSize:11,color:C.g400,marginBottom:8,fontWeight:600}}>🌐 가입된 계정 (전체 기기 공유)</div>
                   <div style={{display:"flex",flexDirection:"column",gap:7}}>
                     {savedUsers.map(u=>(
-                      <button key={u.id} className="btn" onClick={()=>{setCurrentUser(u);setUserType("student");setScreen("main");saveToLocalAccounts(u);toast(`👋 반가워요, ${u.name}님!`);}}
+                      <button key={u.id} className="btn" onClick={()=>{setCurrentUser(u);setUserType("student");setScreen("main");toast(`👋 반가워요, ${u.name}님!`);}}
                         style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:14,border:`1.5px solid ${C.g200}`,background:C.g100,textAlign:"left"}}>
                         <div style={{width:38,height:38,borderRadius:12,background:`${C.primary}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,overflow:"hidden",flexShrink:0}}>
                           {u.pic?<img src={u.pic} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:u.avatar}
@@ -748,7 +774,7 @@ function App() {
                   <div style={{display:"flex",alignItems:"center",gap:8,margin:"12px 0 10px"}}><div style={{flex:1,height:1,background:C.g200}}/><span style={{fontSize:11,color:C.g400}}>또는 직접 입력</span><div style={{flex:1,height:1,background:C.g200}}/></div>
                 </div>
               ) : (
-                <div style={{textAlign:"center",padding:"18px 0 10px",color:C.g400,fontSize:12}}>이 기기에 저장된 계정이 없어요</div>
+                <div style={{textAlign:"center",padding:"18px 0 10px",color:C.g400,fontSize:12}}>아직 가입된 계정이 없어요</div>
               )}
               <input placeholder="✏️ 이름" value={formName} onChange={e=>setFormName(e.target.value)} style={{width:"100%",border:`1.5px solid ${formName?C.primary:C.g200}`,borderRadius:12,padding:"11px 13px",fontSize:14,color:C.navy,outline:"none",marginBottom:8,background:C.g100}}/>
               <input placeholder="🏫 학교 및 학년" value={formSchool} onChange={e=>setFormSchool(e.target.value)} style={{width:"100%",border:`1.5px solid ${C.g200}`,borderRadius:12,padding:"11px 13px",fontSize:14,color:C.navy,outline:"none",marginBottom:14,background:C.g100}}/>
@@ -924,7 +950,7 @@ function App() {
           </div>
         )}
         {loveModal&&<LoveModal post={loveModal} onClose={()=>setLoveModal(null)} onSend={handleLoveSend}/>}
-        {commentModal&&<CommentModal post={commentModal} currentUser={currentUser} onClose={()=>setCommentModal(null)} onSubmit={handleCommentSubmit} onCommentLike={handleCommentLike} commentLiked={commentLiked}/>}
+        {commentModal&&<CommentModal post={commentModal} currentUser={currentUser} onClose={()=>setCommentModal(null)} onSubmit={handleCommentSubmit} onCommentLike={handleCommentLike} commentLiked={commentLiked} onCommentDelete={handleCommentDelete} onCommentEdit={handleCommentEdit} isAdmin={isAdmin}/>}
         {manageModal&&<ManageModal post={manageModal} onClose={()=>setManageModal(null)} onEdit={p=>{setEditModal(p);setManageModal(null);}} onDelete={handleDelete} onHide={handleHidePost} isAdmin={isAdmin}/>}
         {editModal&&<EditModal post={editModal} onClose={()=>setEditModal(null)} onSave={handleEditSave}/>}
         {lightbox&&<Lightbox items={lightbox.items} initialIndex={lightbox.index} onClose={()=>setLightbox(null)}/>}
@@ -1084,15 +1110,20 @@ function App() {
             ):(
               <>
                 <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>📊 직무별 학생 현황</div>
-                {[["바리스타",23,"#8B4513"],["행정보조",14,"#1B5E20"],["급식보조",12,"#2E7D5A"],["누룽지생산",8,"#C17F24"],["예술",7,"#AD1457"],["서비스",9,"#00838F"],["원예",9,"#2E7D32"],["휠마스터",5,"#1A5276"]].map(([j,n,col])=>(
-                  <div key={j} onClick={()=>setSearchQuery(j)} style={{background:C.white,borderRadius:14,padding:"13px 14px",marginBottom:8,boxShadow:"0 2px 6px rgba(0,0,0,0.04)",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:700,color:C.navy}}>{j}</div>
-                      <div style={{height:6,background:C.g100,borderRadius:3,marginTop:5,overflow:"hidden"}}><div style={{height:"100%",width:`${(n/35)*100}%`,background:col,borderRadius:3}}/></div>
+                {JOB_TAGS.map(tag=>{
+                  const m=JOB_META[tag]||{color:C.primary,emoji:"✨"};
+                  const count=posts.filter(p=>p.tag===tag&&!p.hidden).length;
+                  return (
+                    <div key={tag} onClick={()=>setSearchQuery(tag.replace("#",""))} style={{background:C.white,borderRadius:14,padding:"13px 14px",marginBottom:8,boxShadow:"0 2px 6px rgba(0,0,0,0.04)",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+                      <span style={{fontSize:18}}>{m.emoji}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:700,color:C.navy}}>{tag.replace("#","")}</div>
+                        <div style={{height:6,background:C.g100,borderRadius:3,marginTop:5,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min((count/10)*100,100)}%`,background:m.color,borderRadius:3}}/></div>
+                      </div>
+                      <span style={{fontSize:14,fontWeight:900,color:m.color}}>{count}개</span>
                     </div>
-                    <span style={{fontSize:14,fontWeight:900,color:col}}>{n}명</span>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
           </div>
@@ -1665,7 +1696,7 @@ function App() {
       </div>
 
       {loveModal&&<LoveModal post={loveModal} onClose={()=>setLoveModal(null)} onSend={handleLoveSend}/>}
-      {commentModal&&<CommentModal post={commentModal} currentUser={currentUser} onClose={()=>setCommentModal(null)} onSubmit={handleCommentSubmit} onCommentLike={handleCommentLike} commentLiked={commentLiked}/>}
+      {commentModal&&<CommentModal post={commentModal} currentUser={currentUser} onClose={()=>setCommentModal(null)} onSubmit={handleCommentSubmit} onCommentLike={handleCommentLike} commentLiked={commentLiked} onCommentDelete={handleCommentDelete} onCommentEdit={handleCommentEdit} isAdmin={isAdmin}/>}
       {manageModal&&<ManageModal post={manageModal} onClose={()=>setManageModal(null)} onEdit={p=>{setEditModal(p);setManageModal(null);}} onDelete={handleDelete} onHide={handleHidePost} isAdmin={isAdmin}/>}
       {editModal&&<EditModal post={editModal} onClose={()=>setEditModal(null)} onSave={handleEditSave}/>}
       {/* ✅ FIX 3: 전역 라이트박스 */}
@@ -1776,14 +1807,21 @@ function LoveModal({post,onClose,onSend}) {
 }
 
 /* ── 댓글 모달 ── */
-function CommentModal({post, currentUser, onClose, onSubmit, onCommentLike, commentLiked}) {
+function CommentModal({post, currentUser, onClose, onSubmit, onCommentLike, commentLiked, onCommentDelete, onCommentEdit, isAdmin}) {
   const [text,setText] = useState("");
+  const [editingIdx,setEditingIdx] = useState(null);
+  const [editText,setEditText] = useState("");
   const m=JOB_META[post.tag]||{color:"#FF6B35"};
   const comments=post.commentList||[];
   const handleSend = () => {
     if(!text.trim()) return;
     onSubmit(post.id,{author:currentUser?.name||"익명",avatar:currentUser?.avatar||"👤",pic:currentUser?.pic||null,userId:currentUser?.id||null,text:text.trim(),time:"방금 전",createdAt:Date.now()});
     setText("");
+  };
+  const handleEditSave = (idx) => {
+    if(!editText.trim()) return;
+    onCommentEdit&&onCommentEdit(post.id,idx,editText.trim());
+    setEditingIdx(null);
   };
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={onClose}>
@@ -1798,28 +1836,51 @@ function CommentModal({post, currentUser, onClose, onSubmit, onCommentLike, comm
         <div style={{overflowY:"auto",flex:1,padding:"14px 18px",display:"flex",flexDirection:"column",gap:12}}>
           {comments.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:C.g400}}><div style={{fontSize:32,marginBottom:8}}>💬</div><div style={{fontSize:13,fontWeight:600}}>첫 번째 댓글을 남겨보세요!</div></div>}
           {comments.map((c,i)=>{
-            const likeKey = `${post.id}_${i}`;
-            const isLiked = !!(commentLiked&&commentLiked[likeKey]);
-            const likeCount = c.likes||0;
+            const likeKey=`${post.id}_${i}`;
+            const isLiked=!!(commentLiked&&commentLiked[likeKey]);
+            const likeCount=c.likes||0;
+            const canModify=(c.userId&&c.userId===currentUser?.id)||isAdmin;
+            const isEditing=editingIdx===i;
             return (
               <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",animation:`fadeUp 0.3s ${i*0.04}s ease forwards`,opacity:0}}>
                 <div style={{width:34,height:34,borderRadius:11,background:`${m.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:19,flexShrink:0,overflow:"hidden"}}>
                   {c.pic?<img src={c.pic} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:c.avatar||"👤"}
                 </div>
                 <div style={{flex:1,background:C.g100,borderRadius:"4px 14px 14px 14px",padding:"9px 12px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3,alignItems:"center",gap:6}}>
                     <span style={{fontSize:12,fontWeight:700,color:C.navy}}>{c.author}</span>
-                    <span style={{fontSize:10,color:C.g400}}>{c.createdAt?timeAgo(c.createdAt):c.time}</span>
+                    <div style={{display:"flex",gap:3,alignItems:"center",flexShrink:0}}>
+                      {c.edited&&<span style={{fontSize:9,color:C.g400}}>(수정됨)</span>}
+                      <span style={{fontSize:10,color:C.g400}}>{c.createdAt?timeAgo(c.createdAt):c.time}</span>
+                      {canModify&&!isEditing&&(
+                        <>
+                          <button className="btn" onClick={()=>{setEditingIdx(i);setEditText(c.text);}} style={{background:"none",border:"none",fontSize:12,color:C.g400,padding:"0 1px",cursor:"pointer",lineHeight:1}}>✏️</button>
+                          <button className="btn" onClick={()=>onCommentDelete&&onCommentDelete(post.id,i)} style={{background:"none",border:"none",fontSize:12,color:"#E53935",padding:"0 1px",cursor:"pointer",lineHeight:1}}>🗑️</button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div style={{fontSize:13,color:C.g600,lineHeight:1.55}}>{c.text}</div>
-                  {/* 댓글 하트 */}
-                  <div style={{display:"flex",justifyContent:"flex-end",marginTop:7}}>
-                    <button className="btn" onClick={()=>onCommentLike&&onCommentLike(post,i)}
-                      style={{display:"flex",alignItems:"center",gap:4,background:isLiked?"#FFF0F0":C.white,border:`1.5px solid ${isLiked?"#FF6B6B":C.g200}`,borderRadius:20,padding:"3px 10px",fontSize:12,color:isLiked?"#E53935":C.g400,fontWeight:isLiked?700:400,transition:"all .18s",cursor:"pointer"}}>
-                      <span style={{fontSize:13}}>{isLiked?"❤️":"🤍"}</span>
-                      {likeCount>0&&<span style={{fontSize:11}}>{likeCount}</span>}
-                    </button>
-                  </div>
+                  {isEditing?(
+                    <div>
+                      <textarea value={editText} onChange={e=>setEditText(e.target.value)} rows={2}
+                        style={{width:"100%",border:`1.5px solid ${C.primary}`,borderRadius:8,padding:"6px 9px",fontSize:13,color:C.navy,resize:"none",outline:"none",background:"#fff",lineHeight:1.5}}/>
+                      <div style={{display:"flex",gap:6,marginTop:6}}>
+                        <button className="btn" onClick={()=>handleEditSave(i)} style={{flex:1,padding:"6px",borderRadius:8,border:"none",background:C.primary,color:"#fff",fontSize:12,fontWeight:700}}>저장</button>
+                        <button className="btn" onClick={()=>setEditingIdx(null)} style={{flex:1,padding:"6px",borderRadius:8,border:`1px solid ${C.g200}`,background:"#fff",color:C.g600,fontSize:12}}>취소</button>
+                      </div>
+                    </div>
+                  ):(
+                    <div style={{fontSize:13,color:C.g600,lineHeight:1.55}}>{c.text}</div>
+                  )}
+                  {!isEditing&&(
+                    <div style={{display:"flex",justifyContent:"flex-end",marginTop:7}}>
+                      <button className="btn" onClick={()=>onCommentLike&&onCommentLike(post,i)}
+                        style={{display:"flex",alignItems:"center",gap:4,background:isLiked?"#FFF0F0":C.white,border:`1.5px solid ${isLiked?"#FF6B6B":C.g200}`,borderRadius:20,padding:"3px 10px",fontSize:12,color:isLiked?"#E53935":C.g400,fontWeight:isLiked?700:400,transition:"all .18s",cursor:"pointer"}}>
+                        <span style={{fontSize:13}}>{isLiked?"❤️":"🤍"}</span>
+                        {likeCount>0&&<span style={{fontSize:11}}>{likeCount}</span>}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
