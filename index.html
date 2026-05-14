@@ -330,6 +330,10 @@ function App() {
   const [loveModal,setLoveModal]     = useState(null);
   const [detail,setDetail]           = useState(null);
   const [detailTab,setDetailTab]     = useState("gallery"); // "gallery" | "posts"
+  // 관리자 전용 상태 (hooks는 조건문 이전에 선언해야 함)
+  const [adminSubTab, setAdminSubTab]           = useState("posts");
+  const [adminUsers, setAdminUsers]             = useState([]);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [commentModal,setCommentModal] = useState(null);
   const [manageModal,setManageModal] = useState(null);
   const [editModal,setEditModal]     = useState(null);
@@ -465,6 +469,19 @@ function App() {
       if (data) setSentLovecalls(Object.values(data).sort((a,b)=>b.sentAt-a.sentAt));
     });
   }, [currentUser, userType]);
+
+  // 관리자 체크 (hooks 이전에 선언 필요)
+  const isAdmin = ["전예원"].includes(currentUser?.name) && userType==="student";
+
+  // 관리자 계정 목록 로드 (조건부 반환 이전에 선언해야 함)
+  useEffect(()=>{
+    if(activeTab!=="profile"||adminSubTab!=="accounts"||!isAdmin) return;
+    setAdminUsersLoading(true);
+    FB.get("users").then(data=>{
+      setAdminUsers(data?Object.values(data):[]);
+      setAdminUsersLoading(false);
+    }).catch(()=>setAdminUsersLoading(false));
+  },[activeTab,adminSubTab,isAdmin]);
 
   /* ── 파일 처리 ── */
   const pickFiles = async e => {
@@ -931,23 +948,6 @@ function App() {
   };
 
   /* ══ MAIN ══ */
-  // 관리자 체크
-  const isAdmin = ["전예원"].includes(currentUser?.name) && userType==="student";
-
-  // 관리자 전용 상태
-  const [adminSubTab, setAdminSubTab] = useState("posts"); // "posts" | "accounts"
-  const [adminUsers, setAdminUsers]   = useState([]);
-  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
-
-  // 관리자 계정 목록 로드 (계정 탭 열 때)
-  useEffect(()=>{
-    if(activeTab!=="profile"||adminSubTab!=="accounts"||!isAdmin) return;
-    setAdminUsersLoading(true);
-    FB.get("users").then(data=>{
-      setAdminUsers(data?Object.values(data):[]);
-      setAdminUsersLoading(false);
-    }).catch(()=>setAdminUsersLoading(false));
-  },[activeTab,adminSubTab,isAdmin]);
 
   // 게시물 숨김/공개 토글
   const handleHidePost = async (post) => {
@@ -1335,8 +1335,6 @@ function App() {
 
           {/* ── 관리자 패널 콘텐츠 ── */}
           {isAdmin&&(
-            {/* ── 일반 사용자 (학생/기업) 프로필 ── */}
-          {!isAdmin&&(
           <div style={{padding:"14px 14px 0"}}>
               {adminSubTab==="posts"&&(
                 <div>
@@ -1442,6 +1440,9 @@ function App() {
               <button className="btn" onClick={()=>{setCurrentUser(null);LS.set("dc_current_user",null);setScreen("login");setLoginTab("new");setFormName("");setFormSchool("");setFormPic(null);}} style={{width:"100%",padding:"13px",borderRadius:14,border:`1px solid ${C.g200}`,background:C.white,color:C.g600,fontSize:14,fontWeight:600,marginBottom:20}}>로그아웃</button>
             </div>
           )}
+          {/* ── 일반 사용자 (학생/기업) 프로필 ── */}
+          {!isAdmin&&(
+          <div style={{padding:"14px 14px 0"}}>
             {userType==="company"?(
               <div>
                 <div style={{fontSize:15,fontWeight:800,color:C.navy,marginBottom:10}}>💌 보낸 러브콜</div>
