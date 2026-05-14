@@ -4196,34 +4196,7 @@ function App() {
         fontWeight: 700,
         flexShrink: 0
       }
-    }, "\uAC8C\uC2DC\uBB3C \uBCF4\uAE30"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: async () => {
-        if (!window.confirm(`"${u.name}" 계정을 탈퇴 처리할까요?\n게시물도 모두 삭제됩니다.`)) return;
-        // Firebase에서 유저 삭제
-        await FB.remove(`users/${u.id}`);
-        await FB.remove(`userPics/${u.id}`);
-        await FB.remove(`notifications/${u.id}`);
-        await FB.remove(`lovecalls/${u.id}`);
-        // 해당 유저 게시물 삭제
-        const userPosts = posts.filter(p => p.userId === u.id);
-        await Promise.all(userPosts.map(p => FB.remove(`posts/${p.id}`)));
-        // UI 갱신
-        setPosts(prev => prev.filter(p => p.userId !== u.id));
-        setAdminUsers(prev => prev.filter(au => au.id !== u.id));
-        toast(`🗑️ "${u.name}" 계정이 삭제됐어요.`);
-      },
-      style: {
-        padding: "6px 10px",
-        borderRadius: 10,
-        border: "1.5px solid #FFCDD2",
-        background: "#FFF5F5",
-        color: "#E53935",
-        fontSize: 11,
-        fontWeight: 700,
-        flexShrink: 0
-      }
-    }, "\uD83D\uDDD1\uFE0F \uD0C8\uD1F0"));
+    }, "\uAC8C\uC2DC\uBB3C \uBCF4\uAE30"));
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8
