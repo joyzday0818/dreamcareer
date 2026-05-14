@@ -10,13 +10,22 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    /* ✅ FIX 1: 브라우저 기본 당겨서 새로고침 방지 */
-    /* ✅ FIX 3: 갤럭시/삼성 브라우저 높이 보정 */
-    html{height:100%;height:-webkit-fill-available;font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden}
-    body{height:100%;min-height:-webkit-fill-available;font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden}
-    #root{height:100%;overflow:hidden}
-    .app-shell{height:100vh;height:100dvh}
-    .tab-bar{padding-bottom:max(20px,env(safe-area-inset-bottom,20px))!important}
+    html{font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden;height:100%}
+    body{font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden;height:100%}
+    #root{height:100%}
+    /* 갤럭시/삼성 브라우저: JS가 --app-height를 window.innerHeight로 주입 */
+    .app-shell{
+      height:100vh;           /* 기본 fallback */
+      height:100dvh;          /* 모던 브라우저 */
+      height:var(--app-height,100vh); /* JS 주입값 우선 (삼성 브라우저) */
+    }
+    /* 탭바 안전영역 - 홈 제스처 바 위로 올라오게 */
+    .tab-bar{
+      padding-top:7px;
+      padding-bottom:20px;
+      padding-bottom:env(safe-area-inset-bottom,20px);
+      padding-bottom:max(20px,env(safe-area-inset-bottom,20px));
+    }
     ::-webkit-scrollbar{display:none}
     input,textarea,button{font-family:'Noto Sans KR',sans-serif}
     @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
@@ -283,7 +292,7 @@ function PostCard({post, liked, loved, onLike, onLove, onOpen, onComment, onMana
         {items.length>1&&<div style={{position:"absolute",top:10,right:10,background:"rgba(0,0,0,0.58)",color:"#fff",borderRadius:10,padding:"4px 10px",fontSize:11,fontWeight:700,pointerEvents:"none"}}>📷 {items.length}장</div>}
       </div>
       <div style={{padding:"10px 13px 4px"}}>
-        <div style={{fontSize:13,color:C.g600,lineHeight:1.65,cursor:"pointer"}} onClick={()=>onOpen(post)}>{post.desc}</div>
+        <div style={{fontSize:13,color:C.g600,lineHeight:1.65,cursor:"pointer",whiteSpace:"pre-wrap",wordBreak:"break-word"}} onClick={()=>onOpen(post)}>{post.desc}</div>
       </div>
       <div style={{padding:"7px 13px 10px"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
@@ -425,28 +434,51 @@ function App() {
     }
   }, []);
 
+  /* ── 갤럭시/삼성 브라우저 실제 높이 주입 ── */
+  useEffect(()=>{
+    const setH = () => {
+      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+    };
+    setH();
+    window.addEventListener('resize', setH);
+    window.addEventListener('orientationchange', ()=>{ setTimeout(setH, 200); });
+    return ()=>window.removeEventListener('resize', setH);
+  }, []);
+
   /* ── 앱 초기화 ── */
   useEffect(()=>{ setTimeout(()=>setScreen("login"),2000); },[]);
 
   const loadFromFirebase = useCallback(async (showRefresh=false) => {
     if (showRefresh) setIsRefreshing(true);
-    const data = await FB.get("posts");
-    if (data) {
-      const fbPosts = Object.values(data).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-      const fbIds = fbPosts.map(p=>p.id);
-      setPosts([...fbPosts, ...DEMO_POSTS.filter(d=>!fbIds.includes(d.id))]);
-    }
+    try {
+      const data = await FB.get("posts");
+      if (data) {
+        const fbPosts = Object.values(data).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+        const fbIds = fbPosts.map(p=>p.id);
+        setPosts([...fbPosts, ...DEMO_POSTS.filter(d=>!fbIds.includes(d.id))]);
+      }
+    } catch(e) { console.warn("피드 로드 실패", e); }
     setPostsReady(true);
     if (showRefresh) { setTimeout(()=>setIsRefreshing(false), 600); }
   }, []);
 
   useEffect(()=>{
     loadFromFirebase();
-    const interval = setInterval(()=>{
-      // ✅ FIX 1: 피드 탭일 때만 자동 새로고침
-      if (activeTab === 'feed') loadFromFirebase();
-    }, 10000);
-    return ()=>clearInterval(interval);
+    // ✅ 성능 개선: 45초 간격 + 탭 숨김 시 자동 정지
+    let interval = null;
+    const startInterval = () => {
+      if (interval) return;
+      interval = setInterval(()=>{
+        if (activeTab === 'feed' && document.visibilityState === 'visible') {
+          loadFromFirebase();
+        }
+      }, 45000); // 10초→45초로 늘려 Firebase 트래픽 대폭 감소
+    };
+    const stopInterval = () => { clearInterval(interval); interval = null; };
+    const onVisibility = () => document.hidden ? stopInterval() : startInterval();
+    startInterval();
+    document.addEventListener('visibilitychange', onVisibility);
+    return ()=>{ stopInterval(); document.removeEventListener('visibilitychange', onVisibility); };
   }, [loadFromFirebase, activeTab]);
 
   useEffect(()=>{ LS.set("dc_liked",liked); },[liked]);
@@ -992,6 +1024,8 @@ function App() {
     }
   };
 
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+
   /* ══ MAIN ══ */
 
   // 게시물 숨김/공개 토글
@@ -1024,10 +1058,31 @@ function App() {
           {syncStatus==="saving"&&<span style={{fontSize:10,color:C.g400}}>저장 중...</span>}
           {syncStatus==="saved"&&<span style={{fontSize:10,color:"#2D6A4F"}}>✓ 저장됨</span>}
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <span style={{background:userType==="company"?C.accent:C.primary,color:"#fff",borderRadius:10,padding:"4px 11px",fontSize:11,fontWeight:700}}>
-            {userType==="company"?`🏢 ${currentUser?.name||"기업"}`:("🎓 "+(currentUser?.name||"학생"))}
-          </span>
+        <div style={{display:"flex",gap:8,alignItems:"center",position:"relative"}}>
+          <button className="btn" onClick={()=>setShowAccountMenu(v=>!v)}
+            style={{background:userType==="company"?C.accent:C.primary,color:"#fff",borderRadius:10,padding:"4px 11px",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>
+            {userType==="company"?`🏢 ${currentUser?.name||"기업"}`:((isAdmin?"🔧 ":"🎓 ")+(currentUser?.name||"학생"))}
+          </button>
+          {showAccountMenu&&(
+            <>
+              <div style={{position:"fixed",inset:0,zIndex:98}} onClick={()=>setShowAccountMenu(false)}/>
+              <div style={{position:"absolute",top:"calc(100% + 8px)",right:0,background:C.white,borderRadius:14,boxShadow:"0 8px 28px rgba(0,0,0,0.15)",padding:"8px",zIndex:99,minWidth:140,animation:"fadeUp 0.18s ease"}}>
+                <div style={{padding:"8px 12px 6px",borderBottom:`1px solid ${C.g100}`,marginBottom:4}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.navy}}>{currentUser?.name}</div>
+                  <div style={{fontSize:10,color:C.g400}}>{currentUser?.school||userType==="company"?"기업 담당자":""}</div>
+                </div>
+                <button className="btn" onClick={()=>{setShowAccountMenu(false);setActiveTab("profile");}} style={{width:"100%",padding:"8px 12px",borderRadius:10,border:"none",background:"transparent",textAlign:"left",fontSize:12,color:C.navy,fontWeight:600}}>👤 내 정보</button>
+                <button className="btn" onClick={()=>{
+                  setShowAccountMenu(false);
+                  setCurrentUser(null);
+                  LS.set("dc_current_user",null);
+                  setScreen("login");
+                  setLoginTab("new");
+                  setFormName(""); setFormSchool(""); setFormPic(null);
+                }} style={{width:"100%",padding:"8px 12px",borderRadius:10,border:"none",background:"transparent",textAlign:"left",fontSize:12,color:"#E53935",fontWeight:600}}>🚪 로그아웃</button>
+              </div>
+            </>
+          )}
           <span style={{fontSize:20,cursor:"pointer"}} onClick={()=>setActiveTab("notify")}>🔔</span>
         </div>
       </div>
