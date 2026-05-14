@@ -534,12 +534,19 @@ function App() {
     const users = usersData ? Object.values(usersData) : [];
     const exist = users.find(u=>u.name===formName.trim()&&u.school===(formSchool.trim()||""));
     if(exist) {
-      setCurrentUser(exist); setUserType("student"); setScreen("main");
+      // 사진은 userPics에서 별도 로드
+      const pic = await FB.get(`userPics/${exist.id}`);
+      const userWithPic = {...exist, pic: pic||null};
+      setCurrentUser(userWithPic); setUserType("student"); setScreen("main");
       toast(`👋 다시 만나요, ${exist.name}님!`); return;
     }
-    const newUser={id:"u"+Date.now(),name:formName.trim(),school:formSchool.trim(),avatar:formAvatar,pic:formPic};
+    // users/ 에는 사진 없이 경량 정보만 저장
+    const newUser={id:"u"+Date.now(),name:formName.trim(),school:formSchool.trim(),avatar:formAvatar};
     await FB.set(`users/${newUser.id}`, newUser);
-    setCurrentUser(newUser); setUserType("student"); setScreen("main");
+    // 사진은 userPics/ 에 분리 저장
+    if(formPic) await FB.set(`userPics/${newUser.id}`, formPic);
+    const userWithPic = {...newUser, pic:formPic};
+    setCurrentUser(userWithPic); setUserType("student"); setScreen("main");
     toast(`🎉 환영해요, ${newUser.name}님!`);
   };
 
@@ -549,7 +556,8 @@ function App() {
     const users = usersData ? Object.values(usersData) : [];
     const found = users.find(u=>u.name===formName.trim()&&u.school===(formSchool.trim()||""));
     if(!found) { toast("❌ 일치하는 계정이 없어요. 새로 가입해주세요!"); return; }
-    setCurrentUser(found); setUserType("student"); setScreen("main");
+    const pic = await FB.get(`userPics/${found.id}`);
+    setCurrentUser({...found, pic: pic||null}); setUserType("student"); setScreen("main");
     toast(`👋 반가워요, ${found.name}님!`);
   };
 
@@ -608,25 +616,6 @@ function App() {
         FB.set(`notifications/${post.userId}/${notifId}`, notif);
       }
     }
-  };
-
-  /* ── 계정 탈퇴 ── */
-  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
-  const handleDeleteAccount = async () => {
-    if(!currentUser?.id) return;
-    // Firebase에서 유저 삭제
-    await FB.remove(`users/${currentUser.id}`);
-    // 해당 유저의 게시물 삭제
-    const myPosts = posts.filter(p=>p.userId===currentUser.id);
-    await Promise.all(myPosts.map(p=>FB.remove(`posts/${p.id}`)));
-    // 알림 데이터 삭제
-    await FB.remove(`notifications/${currentUser.id}`);
-    await FB.remove(`lovecalls/${currentUser.id}`);
-    // 로컬 초기화
-    setCurrentUser(null);
-    LS.set("dc_current_user",null);
-    setScreen("login");
-    setLoginTab("new");
   };
 
   /* ── 설정 저장 ── */
@@ -1748,21 +1737,6 @@ function App() {
               )}
             </div>
             <button className="btn" onClick={()=>{setCurrentUser(null);LS.set("dc_current_user",null);setScreen("login");setLoginTab("new");setFormName("");setFormSchool("");setFormPic(null);}} style={{width:"100%",padding:"13px",borderRadius:14,border:`1px solid ${C.g200}`,background:C.white,color:C.g600,fontSize:14,fontWeight:600,marginTop:4}}>로그아웃</button>
-            {/* 계정 탈퇴 */}
-            {userType==="student"&&(
-              !deleteAccountConfirm?(
-                <button className="btn" onClick={()=>setDeleteAccountConfirm(true)} style={{width:"100%",padding:"11px",borderRadius:14,border:"1px solid #FFCDD2",background:"#FFF5F5",color:"#E53935",fontSize:13,fontWeight:600,marginTop:8}}>계정 탈퇴</button>
-              ):(
-                <div style={{background:"#FFF5F5",borderRadius:14,padding:"14px",marginTop:8,border:"1.5px solid #FFCDD2"}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#C62828",marginBottom:4}}>⚠️ 정말 탈퇴할까요?</div>
-                  <div style={{fontSize:12,color:"#E53935",marginBottom:12}}>계정과 모든 게시물이 영구 삭제돼요.</div>
-                  <div style={{display:"flex",gap:8}}>
-                    <button className="btn" onClick={()=>setDeleteAccountConfirm(false)} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.g200}`,background:C.white,color:C.g600,fontSize:13,fontWeight:700}}>취소</button>
-                    <button className="btn" onClick={handleDeleteAccount} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:"#E53935",color:"#fff",fontSize:13,fontWeight:900}}>탈퇴하기</button>
-                  </div>
-                </div>
-              )
-            )}
           </div>
           )}{/* end !isAdmin */}
         </div>
