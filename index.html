@@ -921,6 +921,7 @@ function App() {
   const [showPortfolio, setShowPortfolio] = useState(false);
   const [portfolioView, setPortfolioView] = useState("card"); // "card" | "grid"
   const [showSettings, setShowSettings] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [stName, setStName] = useState("");
   const [stSchool, setStSchool] = useState("");
   const [stAvatar, setStAvatar] = useState("👩");
@@ -2476,7 +2477,6 @@ function App() {
       setSentLovecalls(prev => [sentData, ...prev]);
     }
   };
-  const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   /* ══ MAIN ══ */
 
