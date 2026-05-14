@@ -13,12 +13,19 @@
     html{font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden;height:100%}
     body{font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden;height:100%}
     #root{height:100%}
-    /* 갤럭시/삼성/iOS 등 모든 모바일: position fixed가 가장 확실 */
-    html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:#1a1a1a;overscroll-behavior:none;overflow:hidden}
-    #root{position:fixed;inset:0;overflow:hidden}
-    .app-shell{position:fixed!important;inset:0;display:flex;flex-direction:column;max-width:520px;margin:0 auto;left:50%;transform:translateX(-50%);background:#FAFAF8}
-    .app-scroll{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-    .tab-bar{flex-shrink:0;padding-bottom:max(16px,env(safe-area-inset-bottom,16px))}
+    /* 갤럭시/삼성 브라우저: JS가 --app-height를 window.innerHeight로 주입 */
+    .app-shell{
+      height:100vh;           /* 기본 fallback */
+      height:100dvh;          /* 모던 브라우저 */
+      height:var(--app-height,100vh); /* JS 주입값 우선 (삼성 브라우저) */
+    }
+    /* 탭바 안전영역 - 홈 제스처 바 위로 올라오게 */
+    .tab-bar{
+      padding-top:7px;
+      padding-bottom:20px;
+      padding-bottom:env(safe-area-inset-bottom,20px);
+      padding-bottom:max(20px,env(safe-area-inset-bottom,20px));
+    }
     ::-webkit-scrollbar{display:none}
     input,textarea,button{font-family:'Noto Sans KR',sans-serif}
     @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
@@ -940,6 +947,19 @@ function App() {
     }
   }, []);
 
+  /* ── 갤럭시/삼성 브라우저 실제 높이 주입 ── */
+  useEffect(() => {
+    const setH = () => {
+      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+    };
+    setH();
+    window.addEventListener('resize', setH);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(setH, 200);
+    });
+    return () => window.removeEventListener('resize', setH);
+  }, []);
+
   /* ── 앱 초기화 ── */
   useEffect(() => {
     setTimeout(() => setScreen("login"), 2000);
@@ -1409,21 +1429,14 @@ function App() {
     }
   };
 
-  /* ── 가입된 계정 목록 - 캐시 우선, 백그라운드 갱신 ── */
-  const [savedUsers, setSavedUsers] = useState(()=>LS.get("dc_users_cache",[]));
+  /* ── 가입된 계정 목록 (Firebase 전체) ── */
+  const [savedUsers, setSavedUsers] = useState([]);
   const [savedUsersLoading, setSavedUsersLoading] = useState(false);
   useEffect(() => {
     if (screen !== "login") return;
-    const cached = LS.get("dc_users_cache", []);
-    // 캐시 없을 때만 로딩 표시
-    if (cached.length === 0) setSavedUsersLoading(true);
-    // 백그라운드에서 Firebase 갱신 (사진 제외한 경량 데이터만)
+    setSavedUsersLoading(true);
     FB.get("users").then(data => {
-      if (data) {
-        const users = Object.values(data).map(({pic, ...rest}) => rest);
-        setSavedUsers(users);
-        LS.set("dc_users_cache", users);
-      }
+      setSavedUsers(data ? Object.values(data) : []);
       setSavedUsersLoading(false);
     }).catch(() => setSavedUsersLoading(false));
   }, [screen]);
@@ -2623,7 +2636,6 @@ function App() {
     },
     onClick: () => setActiveTab("notify")
   }, "\uD83D\uDD14"))), /*#__PURE__*/React.createElement("div", {
-    className: "app-scroll",
     style: {
       flex: 1,
       overflowY: "auto",
