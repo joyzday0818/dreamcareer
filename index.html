@@ -176,59 +176,7 @@ const JOB_META = {
   }
 };
 const AVATARS = ["👩", "👦", "👧", "🧑", "👨", "👩‍🦱", "👦🏽", "👧🏻", "🧑🏾", "👨🏼"];
-const DEMO_POSTS = [{
-  id: "d1",
-  userId: "demo",
-  name: "김민서",
-  school: "한빛특수학교 3학년",
-  avatar: "👩",
-  profilePic: null,
-  tag: "#바리스타",
-  desc: "오늘은 카페라떼 아트에 도전했어요! 15번 연습하고 드디어 성공 ☕✨",
-  likes: 128,
-  commentList: [{
-    author: "선생님",
-    avatar: "👨",
-    text: "정말 잘했어요! 자랑스러워요 👏",
-    time: "1시간 전"
-  }],
-  time: "2시간 전",
-  mediaList: [],
-  progress: 72
-}, {
-  id: "d2",
-  userId: "demo",
-  name: "박도현",
-  school: "빛나리학교 2학년",
-  avatar: "👦",
-  profilePic: null,
-  tag: "#급식보조",
-  desc: "오늘 급식 보조 실습! 300인분 배식을 완료했어요 🍱 손발이 척척!",
-  likes: 89,
-  commentList: [],
-  time: "4시간 전",
-  mediaList: [],
-  progress: 88
-}, {
-  id: "d3",
-  userId: "demo",
-  name: "이소연",
-  school: "하늘빛학교 3학년",
-  avatar: "👧",
-  profilePic: null,
-  tag: "#예술",
-  desc: "오늘 도예 수업에서 꽃병을 만들었어요 🎨 내 작품이 생겼다는 게 뿌듯해요!",
-  likes: 203,
-  commentList: [{
-    author: "김민서",
-    avatar: "👩",
-    text: "너무 예쁘다!! 🌸",
-    time: "어제"
-  }],
-  time: "어제",
-  mediaList: [],
-  progress: 91
-}];
+const DEMO_POSTS = [];
 function compressFile(file) {
   return new Promise(res => {
     const r = new FileReader();
@@ -3251,7 +3199,18 @@ function App() {
       color: C.g400,
       textAlign: "right"
     }
-  }, desc.length, "\uC790")), /*#__PURE__*/React.createElement("div", {
+  }, desc.length, "\uC790"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10,
+      background: C.g100,
+      borderRadius: 10,
+      padding: "10px 12px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, fontWeight: 700, color: C.g400, marginBottom: 5 }
+  }, "\uD83D\uDCA1 \uC608\uC2DC"), /*#__PURE__*/React.createElement("div", {
+    style: { fontSize: 11, color: C.g600, lineHeight: 1.8, whiteSpace: "pre-wrap" }
+  }, "* \uBC25 \uC9D3\uAE30 \uBC0F \uB204\uB8E1\uC9C0 \uBC18\uC8FD\uD558\uAE30\n- \uCC39\uC30C\uACFC \uBB3C 4:6 \uBE44\uC728 \uB9DE\uC8FC\uC5B4 \uBC25 \uC9D3\uAE30\n- \uBC25\uC5D0 \uC77C\uC815 \uBE44\uC728\uC758 \uBB3C \uB123\uC5B4 \uBC18\uC8FD \uB9CC\uB4E4\uAE30\n- \uC624\uBE10 \uC628\uB3C4 \uC124\uC815\uD558\uAE30"))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: C.white,
       borderRadius: 18,
@@ -4237,7 +4196,34 @@ function App() {
         fontWeight: 700,
         flexShrink: 0
       }
-    }, "\uAC8C\uC2DC\uBB3C \uBCF4\uAE30"));
+    }, "\uAC8C\uC2DC\uBB3C \uBCF4\uAE30"), /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: async () => {
+        if (!window.confirm(`"${u.name}" 계정을 탈퇴 처리할까요?\n게시물도 모두 삭제됩니다.`)) return;
+        // Firebase에서 유저 삭제
+        await FB.remove(`users/${u.id}`);
+        await FB.remove(`userPics/${u.id}`);
+        await FB.remove(`notifications/${u.id}`);
+        await FB.remove(`lovecalls/${u.id}`);
+        // 해당 유저 게시물 삭제
+        const userPosts = posts.filter(p => p.userId === u.id);
+        await Promise.all(userPosts.map(p => FB.remove(`posts/${p.id}`)));
+        // UI 갱신
+        setPosts(prev => prev.filter(p => p.userId !== u.id));
+        setAdminUsers(prev => prev.filter(au => au.id !== u.id));
+        toast(`🗑️ "${u.name}" 계정이 삭제됐어요.`);
+      },
+      style: {
+        padding: "6px 10px",
+        borderRadius: 10,
+        border: "1.5px solid #FFCDD2",
+        background: "#FFF5F5",
+        color: "#E53935",
+        fontSize: 11,
+        fontWeight: 700,
+        flexShrink: 0
+      }
+    }, "\uD83D\uDDD1\uFE0F \uD0C8\uD1F0"));
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8
