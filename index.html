@@ -10,31 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    html{font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden;height:100%}
-    body{font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden;height:100%}
-    #root{height:100%}
-    /* 갤럭시/삼성 브라우저: JS가 --app-height를 window.innerHeight로 주입 */
-    .app-shell{
-      height:100vh;           /* 기본 fallback */
-      height:100dvh;          /* 모던 브라우저 */
-      height:var(--app-height,100vh); /* JS 주입값 우선 (삼성 브라우저) */
-    }
-    /* 탭바 안전영역 - 홈 제스처 바 위로 올라오게 */
-    .tab-bar{
-      padding-top:7px;
-      padding-bottom:20px;
-      padding-bottom:env(safe-area-inset-bottom,20px);
-      padding-bottom:max(20px,env(safe-area-inset-bottom,20px));
-    }
+    html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:#1a1a1a;overscroll-behavior:none;overflow:hidden}
+    #root{position:fixed;inset:0;overflow:hidden}
     ::-webkit-scrollbar{display:none}
     input,textarea,button{font-family:'Noto Sans KR',sans-serif}
+    .app-shell{position:fixed!important;inset:0;display:flex;flex-direction:column;max-width:520px;width:100%;left:50%;transform:translateX(-50%);background:#FAFAF8}
+    .app-scroll{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+    .tab-bar{flex-shrink:0;background:rgba(250,250,248,0.96);backdrop-filter:blur(14px);border-top:1px solid #E8E8E4;display:flex;padding-top:7px;padding-bottom:max(16px,env(safe-area-inset-bottom,16px))}
     @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
     @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
     @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
     @keyframes toast{0%{opacity:0;transform:translateY(-14px) translateX(-50%)}12%,82%{opacity:1;transform:translateY(0) translateX(-50%)}100%{opacity:0;transform:translateY(-14px) translateX(-50%)}}
     @keyframes shimmer{0%{left:-100%}100%{left:130%}}
     @keyframes spin{to{transform:rotate(360deg)}}
-    @keyframes lightboxIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
     .card{transition:transform .18s,box-shadow .18s}
     .card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,0.09)!important}
     .btn{transition:opacity .15s,transform .1s;cursor:pointer}
@@ -56,10 +44,9 @@ const FIREBASE_URL = "https://dreamcar2r-default-rtdb.asia-southeast1.firebaseda
 const FB = {
   async get(path) {
     try {
-      const res = await fetch(`${FIREBASE_URL}/${path}.json`);
-      return res.ok ? await res.json() : null;
+      const r = await fetch(`${FIREBASE_URL}/${path}.json`);
+      return r.ok ? await r.json() : null;
     } catch (e) {
-      console.warn("FB get 실패:", path, e);
       return null;
     }
   },
@@ -72,9 +59,7 @@ const FB = {
         },
         body: JSON.stringify(data)
       });
-    } catch (e) {
-      console.warn("FB set 실패:", path, e);
-    }
+    } catch (e) {}
   },
   async update(path, data) {
     try {
@@ -85,18 +70,14 @@ const FB = {
         },
         body: JSON.stringify(data)
       });
-    } catch (e) {
-      console.warn("FB update 실패:", path, e);
-    }
+    } catch (e) {}
   },
   async remove(path) {
     try {
       await fetch(`${FIREBASE_URL}/${path}.json`, {
         method: "DELETE"
       });
-    } catch (e) {
-      console.warn("FB remove 실패:", path, e);
-    }
+    } catch (e) {}
   }
 };
 const LS = {
@@ -128,43 +109,25 @@ const C = {
   g400: "#9A9A94",
   g600: "#5A5A54"
 };
-const JOB_TAGS = ["#바리스타", "#티마스터", "#스피치", "#누룽지생산", "#뻥과자생산", "#휠마스터", "#운동화 세탁", "#원예재배", "#청소", "#산업체", "#예술"];
+
+// ✅ 변경2: 직무태그 순서 및 목록 업데이트
+const JOB_TAGS = ["#누룽지생산", "#운동화 세탁", "#청소", "#티마스터", "#산업체", "#예술", "#원예재배", "#스피치", "#바리스타", "#뻥과자생산", "#휠마스터"];
 const JOB_META = {
-  "#바리스타": {
-    color: "#8B4513",
-    emoji: "☕"
-  },
-  "#티마스터": {
-    color: "#00695C",
-    emoji: "🫖"
-  },
-  "#스피치": {
-    color: "#6A1B9A",
-    emoji: "🎤"
-  },
   "#누룽지생산": {
     color: "#C17F24",
     emoji: "🍚"
-  },
-  "#뻥과자생산": {
-    color: "#D4631A",
-    emoji: "🫓"
-  },
-  "#휠마스터": {
-    color: "#1A5276",
-    emoji: "♿"
   },
   "#운동화 세탁": {
     color: "#4527A0",
     emoji: "👟"
   },
-  "#원예재배": {
-    color: "#2E7D32",
-    emoji: "🌱"
-  },
   "#청소": {
     color: "#0277BD",
     emoji: "🧹"
+  },
+  "#티마스터": {
+    color: "#00695C",
+    emoji: "🫖"
   },
   "#산업체": {
     color: "#37474F",
@@ -173,6 +136,26 @@ const JOB_META = {
   "#예술": {
     color: "#AD1457",
     emoji: "🎨"
+  },
+  "#원예재배": {
+    color: "#2E7D32",
+    emoji: "🌱"
+  },
+  "#스피치": {
+    color: "#6A1B9A",
+    emoji: "🎤"
+  },
+  "#바리스타": {
+    color: "#8B4513",
+    emoji: "☕"
+  },
+  "#뻥과자생산": {
+    color: "#D4631A",
+    emoji: "🫓"
+  },
+  "#휠마스터": {
+    color: "#1A5276",
+    emoji: "♿"
   }
 };
 const AVATARS = ["👩", "👦", "👧", "🧑", "👨", "👩‍🦱", "👦🏽", "👧🏻", "🧑🏾", "👨🏼"];
@@ -207,7 +190,7 @@ function compressFile(file) {
         canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
         res({
-          url: canvas.toDataURL("image/jpeg", 0.92),
+          url: canvas.toDataURL("image/jpeg", 0.88),
           type: "image/jpeg"
         });
       };
@@ -216,20 +199,18 @@ function compressFile(file) {
     r.readAsDataURL(file);
   });
 }
-function timeAgo(createdAt) {
-  if (!createdAt) return "방금 전";
-  const diff = Date.now() - createdAt;
-  const m = Math.floor(diff / 60000);
+function timeAgo(t) {
+  if (!t) return "방금 전";
+  const d = Date.now() - t,
+    m = Math.floor(d / 60000);
   if (m < 1) return "방금 전";
   if (m < 60) return `${m}분 전`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}시간 전`;
-  const d = Math.floor(h / 24);
-  if (d === 1) return "어제";
-  if (d < 7) return `${d}일 전`;
-  const w = Math.floor(d / 7);
-  if (w < 5) return `${w}주 전`;
-  return `${Math.floor(d / 30)}달 전`;
+  const dd = Math.floor(h / 24);
+  if (dd === 1) return "어제";
+  if (dd < 7) return `${dd}일 전`;
+  return `${Math.floor(dd / 7)}주 전`;
 }
 function Av({
   src,
@@ -284,8 +265,186 @@ function Toast({
     }
   }, msg) : null;
 }
-
-/* ✅ FIX 3: MediaView - onImageClick 추가 */
+function Lightbox({
+  items,
+  initialIndex,
+  onClose
+}) {
+  const [idx, setIdx] = useState(initialIndex || 0);
+  const tx = useRef(0),
+    ty = useRef(0);
+  useEffect(() => {
+    const h = e => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') setIdx(i => Math.max(0, i - 1));
+      if (e.key === 'ArrowRight') setIdx(i => Math.min(items.length - 1, i + 1));
+    };
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, []);
+  if (!items || !items.length) return null;
+  const item = items[idx];
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.97)",
+      zIndex: 600,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    onTouchStart: e => {
+      tx.current = e.touches[0].clientX;
+      ty.current = e.touches[0].clientY;
+    },
+    onTouchEnd: e => {
+      const dx = e.changedTouches[0].clientX - tx.current,
+        dy = Math.abs(e.changedTouches[0].clientY - ty.current);
+      if (dy < 60 && Math.abs(dx) > 50) {
+        if (dx > 0 && idx > 0) setIdx(i => i - 1);
+        if (dx < 0 && idx < items.length - 1) setIdx(i => i + 1);
+      }
+    },
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      padding: "16px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      background: "linear-gradient(rgba(0,0,0,0.6),transparent)",
+      zIndex: 10
+    }
+  }, items.length > 1 ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "rgba(255,255,255,0.9)",
+      fontSize: 13,
+      fontWeight: 700,
+      background: "rgba(0,0,0,0.4)",
+      borderRadius: 10,
+      padding: "4px 12px"
+    }
+  }, idx + 1, "/", items.length) : /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: onClose,
+    style: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      background: "rgba(255,255,255,0.15)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      color: "#fff",
+      fontSize: 18,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: "100%",
+      maxHeight: "calc(100vh - 140px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "60px 12px 20px"
+    },
+    onClick: e => e.stopPropagation()
+  }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement("video", {
+    src: item.url,
+    controls: true,
+    playsInline: true,
+    style: {
+      maxWidth: "100%",
+      maxHeight: "100%",
+      borderRadius: 14
+    }
+  }) : /*#__PURE__*/React.createElement("img", {
+    src: item.url,
+    style: {
+      maxWidth: "100%",
+      maxHeight: "calc(100vh - 140px)",
+      objectFit: "contain",
+      borderRadius: 8
+    },
+    alt: ""
+  })), items.length > 1 && idx > 0 && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: e => {
+      e.stopPropagation();
+      setIdx(i => i - 1);
+    },
+    style: {
+      position: "absolute",
+      left: 10,
+      top: "50%",
+      transform: "translateY(-50%)",
+      width: 46,
+      height: 46,
+      borderRadius: 15,
+      background: "rgba(255,255,255,0.12)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      color: "#fff",
+      fontSize: 28,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "\u2039"), items.length > 1 && idx < items.length - 1 && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: e => {
+      e.stopPropagation();
+      setIdx(i => i + 1);
+    },
+    style: {
+      position: "absolute",
+      right: 10,
+      top: "50%",
+      transform: "translateY(-50%)",
+      width: 46,
+      height: 46,
+      borderRadius: 15,
+      background: "rgba(255,255,255,0.12)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      color: "#fff",
+      fontSize: 28,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "\u203A"), items.length > 1 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      bottom: 28,
+      left: 0,
+      right: 0,
+      display: "flex",
+      justifyContent: "center",
+      gap: 6
+    }
+  }, items.map((_, i) => /*#__PURE__*/React.createElement("button", {
+    key: i,
+    onClick: e => {
+      e.stopPropagation();
+      setIdx(i);
+    },
+    style: {
+      width: i === idx ? 20 : 6,
+      height: 6,
+      borderRadius: 3,
+      background: i === idx ? "#fff" : "rgba(255,255,255,0.35)",
+      border: "none",
+      cursor: "pointer",
+      transition: "all .22s",
+      padding: 0
+    }
+  }))));
+}
 function MediaView({
   mediaList,
   emoji,
@@ -380,7 +539,7 @@ function MediaView({
       display: "block",
       cursor: onImageClick ? "zoom-in" : "default"
     },
-    alt: `사진 ${i + 1}`
+    alt: ""
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
@@ -395,190 +554,6 @@ function MediaView({
     }
   }, i + 1, "/", items.length))));
 }
-
-/* ✅ FIX 3: 라이트박스 컴포넌트 */
-function Lightbox({
-  items,
-  initialIndex,
-  onClose
-}) {
-  const [idx, setIdx] = useState(initialIndex || 0);
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  useEffect(() => {
-    const handleKey = e => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') setIdx(i => Math.max(0, i - 1));
-      if (e.key === 'ArrowRight') setIdx(i => Math.min(items.length - 1, i + 1));
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [items.length, onClose]);
-  if (!items || items.length === 0) return null;
-  const item = items[idx];
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.97)",
-      zIndex: 600,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center"
-    },
-    onTouchStart: e => {
-      touchStartX.current = e.touches[0].clientX;
-      touchStartY.current = e.touches[0].clientY;
-    },
-    onTouchEnd: e => {
-      const dx = e.changedTouches[0].clientX - touchStartX.current;
-      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-      if (dy < 60 && Math.abs(dx) > 50) {
-        if (dx > 0 && idx > 0) setIdx(i => i - 1);
-        if (dx < 0 && idx < items.length - 1) setIdx(i => i + 1);
-      }
-    },
-    onClick: onClose
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      padding: "16px 16px",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      background: "linear-gradient(rgba(0,0,0,0.6),transparent)",
-      zIndex: 10
-    }
-  }, items.length > 1 ? /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: "rgba(255,255,255,0.9)",
-      fontSize: 13,
-      fontWeight: 700,
-      background: "rgba(0,0,0,0.4)",
-      borderRadius: 10,
-      padding: "4px 12px"
-    }
-  }, idx + 1, " / ", items.length) : /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: onClose,
-    style: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      background: "rgba(255,255,255,0.15)",
-      border: "1px solid rgba(255,255,255,0.2)",
-      color: "#fff",
-      fontSize: 18,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: "100%",
-      maxHeight: "calc(100vh - 140px)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "60px 12px 20px",
-      animation: "lightboxIn 0.2s ease"
-    },
-    onClick: e => e.stopPropagation()
-  }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement("video", {
-    src: item.url,
-    controls: true,
-    playsInline: true,
-    style: {
-      maxWidth: "100%",
-      maxHeight: "100%",
-      borderRadius: 14
-    }
-  }) : /*#__PURE__*/React.createElement("img", {
-    src: item.url,
-    style: {
-      maxWidth: "100%",
-      maxHeight: "calc(100vh - 140px)",
-      objectFit: "contain",
-      borderRadius: 8,
-      boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
-    },
-    alt: `사진 ${idx + 1}`
-  })), items.length > 1 && idx > 0 && /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: e => {
-      e.stopPropagation();
-      setIdx(i => i - 1);
-    },
-    style: {
-      position: "absolute",
-      left: 10,
-      top: "50%",
-      transform: "translateY(-50%)",
-      width: 46,
-      height: 46,
-      borderRadius: 15,
-      background: "rgba(255,255,255,0.12)",
-      border: "1px solid rgba(255,255,255,0.2)",
-      color: "#fff",
-      fontSize: 28,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, "\u2039"), items.length > 1 && idx < items.length - 1 && /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: e => {
-      e.stopPropagation();
-      setIdx(i => i + 1);
-    },
-    style: {
-      position: "absolute",
-      right: 10,
-      top: "50%",
-      transform: "translateY(-50%)",
-      width: 46,
-      height: 46,
-      borderRadius: 15,
-      background: "rgba(255,255,255,0.12)",
-      border: "1px solid rgba(255,255,255,0.2)",
-      color: "#fff",
-      fontSize: 28,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, "\u203A"), items.length > 1 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      bottom: 28,
-      left: 0,
-      right: 0,
-      display: "flex",
-      justifyContent: "center",
-      gap: 6
-    }
-  }, items.map((_, i) => /*#__PURE__*/React.createElement("button", {
-    key: i,
-    onClick: e => {
-      e.stopPropagation();
-      setIdx(i);
-    },
-    style: {
-      width: i === idx ? 20 : 6,
-      height: 6,
-      borderRadius: 3,
-      background: i === idx ? "#fff" : "rgba(255,255,255,0.35)",
-      border: "none",
-      cursor: "pointer",
-      transition: "all .22s",
-      padding: 0
-    }
-  }))));
-}
 function PostCard({
   post,
   liked,
@@ -590,8 +565,7 @@ function PostCard({
   onManage,
   userType,
   currentUserId,
-  onImageClick,
-  isAdmin
+  onImageClick
 }) {
   const m = JOB_META[post.tag] || {
     color: C.primary,
@@ -599,7 +573,6 @@ function PostCard({
   };
   const items = post.mediaList || [];
   const isOwn = post.userId && post.userId === currentUserId;
-  const canManage = isOwn || isAdmin;
   return /*#__PURE__*/React.createElement("div", {
     className: "card",
     style: {
@@ -672,11 +645,11 @@ function PostCard({
       fontWeight: 700,
       whiteSpace: "nowrap"
     }
-  }, post.tag?.replace("#", "")), canManage && onManage && /*#__PURE__*/React.createElement("button", {
+  }, post.tag?.replace("#", "")), isOwn && onManage && /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => onManage(post),
     style: {
-      background: isAdmin && !isOwn ? `${C.navy}18` : C.g100,
+      background: C.g100,
       border: "none",
       borderRadius: 10,
       width: 30,
@@ -685,7 +658,7 @@ function PostCard({
       alignItems: "center",
       justifyContent: "center",
       fontSize: 18,
-      color: isAdmin && !isOwn ? C.navy : C.g600,
+      color: C.g600,
       flexShrink: 0
     }
   }, "\u22EF"))), /*#__PURE__*/React.createElement("div", {
@@ -817,10 +790,6 @@ function PostCard({
     }
   }, loved ? "✅ 발송됨" : "💌 러브콜")));
 }
-
-/* ══════════════════════════════════════════
-   메인 앱
-══════════════════════════════════════════ */
 function App() {
   const [screen, setScreen] = useState("splash");
   const [loginTab, setLoginTab] = useState("new");
@@ -836,26 +805,20 @@ function App() {
   const [loved, setLoved] = useState({});
   const [loveModal, setLoveModal] = useState(null);
   const [detail, setDetail] = useState(null);
-  const [detailTab, setDetailTab] = useState("gallery"); // "gallery" | "posts"
-  // 관리자 전용 상태 (hooks는 조건문 이전에 선언해야 함)
-  const [adminSubTab, setAdminSubTab] = useState("posts");
-  const [adminUsers, setAdminUsers] = useState([]);
-  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState("gallery");
+  const [lightbox, setLightbox] = useState(null);
   const [commentModal, setCommentModal] = useState(null);
   const [manageModal, setManageModal] = useState(null);
   const [editModal, setEditModal] = useState(null);
-  // ✅ FIX 3: 라이트박스 상태
-  const [lightbox, setLightbox] = useState(null); // {items:[], index:0}
-  // 알림
   const [lovecalls, setLovecalls] = useState([]);
-  const [notifications, setNotifications] = useState([]); // ✅ FIX 4: 응원/댓글 알림
+  const [notifications, setNotifications] = useState([]);
   const [sentLovecalls, setSentLovecalls] = useState([]);
   const [companyFormVisible, setCompanyFormVisible] = useState(false);
   const [companyFormName, setCompanyFormName] = useState("");
   const [mediaList, setMediaList] = useState([]);
   const [desc, setDesc] = useState("");
   const [selfPraise, setSelfPraise] = useState("");
-  const [tag, setTag] = useState("#바리스타");
+  const [tag, setTag] = useState("#누룽지생산");
   const [selfScore, setSelfScore] = useState(50);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("feed");
@@ -867,15 +830,21 @@ function App() {
   const [filterTag, setFilterTag] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPortfolio, setShowPortfolio] = useState(false);
-  const [portfolioView, setPortfolioView] = useState("card"); // "card" | "grid"
+  const [portfolioView, setPortfolioView] = useState("card");
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  // ✅ 변경1: 자기소개서 상태
+  const [showResume, setShowResume] = useState(false);
+  const [resumeText, setResumeText] = useState("");
+  const [resumeSaving, setResumeSaving] = useState(false);
   const [stName, setStName] = useState("");
   const [stSchool, setStSchool] = useState("");
   const [stAvatar, setStAvatar] = useState("👩");
   const [stPic, setStPic] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
   const [syncStatus, setSyncStatus] = useState("");
+  const [savedUsers, setSavedUsers] = useState(() => LS.get("dc_users_cache", []));
+  const [savedUsersLoading, setSavedUsersLoading] = useState(false);
   const fileRef = useRef();
   const loginPicRef = useRef();
   const settingsPicRef = useRef();
@@ -886,39 +855,26 @@ function App() {
       setTimeout(() => setToastMsg(null), 2700);
     });
   };
-
-  /* ✅ FIX 1: 피드 컨테이너에 non-passive touchmove 등록 → 브라우저 기본 새로고침 완전 차단 */
   useEffect(() => {
     const el = feedRef.current;
     if (!el) return;
-    const handleTouchMove = e => {
+    const h = e => {
       if (isPulling.current) e.preventDefault();
     };
-    el.addEventListener('touchmove', handleTouchMove, {
+    el.addEventListener('touchmove', h, {
       passive: false
     });
-    return () => el.removeEventListener('touchmove', handleTouchMove);
-  }, []); // 마운트 한 번만 등록 (ref는 항상 같은 div를 가리킴)
-
-  // 탭 전환 시 당김 상태 반드시 초기화 (스크롤 블로킹 방지)
-  useEffect(() => {
-    isPulling.current = false;
-    setPullY(0);
-  }, [activeTab]);
-
-  /* ✅ FIX 2: 앱 마운트 시 초기 history state 설정 */
+    return () => el.removeEventListener('touchmove', h);
+  }, []);
   useEffect(() => {
     window.history.replaceState({
       app: 'main'
     }, '');
   }, []);
-
-  /* ✅ FIX 2: 브라우저/하드웨어 뒤로가기 처리 */
   useEffect(() => {
     const onPop = () => {
       if (detail) {
         setDetail(null);
-        // 뒤로가기 후 다시 main state 유지
         window.history.replaceState({
           app: 'main'
         }, '');
@@ -927,8 +883,10 @@ function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, [detail]);
-
-  /* ✅ FIX 2: 상세 화면 진입 시 history state push */
+  useEffect(() => {
+    isPulling.current = false;
+    setPullY(0);
+  }, [activeTab]);
   const openDetail = useCallback(post => {
     window.history.pushState({
       app: 'detail',
@@ -937,30 +895,9 @@ function App() {
     setDetailTab("gallery");
     setDetail(post);
   }, []);
-
-  /* ✅ FIX 2: 돌아가기 버튼 */
   const closeDetail = useCallback(() => {
-    if (window.history.state?.app === 'detail') {
-      window.history.back(); // popstate 핸들러가 setDetail(null) 처리
-    } else {
-      setDetail(null);
-    }
+    if (window.history.state?.app === 'detail') window.history.back();else setDetail(null);
   }, []);
-
-  /* ── 갤럭시/삼성 브라우저 실제 높이 주입 ── */
-  useEffect(() => {
-    const setH = () => {
-      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
-    };
-    setH();
-    window.addEventListener('resize', setH);
-    window.addEventListener('orientationchange', () => {
-      setTimeout(setH, 200);
-    });
-    return () => window.removeEventListener('resize', setH);
-  }, []);
-
-  /* ── 앱 초기화 ── */
   useEffect(() => {
     setTimeout(() => setScreen("login"), 2000);
   }, []);
@@ -969,40 +906,32 @@ function App() {
     try {
       const data = await FB.get("posts");
       if (data) {
-        const fbPosts = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        const fbIds = fbPosts.map(p => p.id);
-        setPosts([...fbPosts, ...DEMO_POSTS.filter(d => !fbIds.includes(d.id))]);
+        const fp = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setPosts(fp);
       }
-    } catch (e) {
-      console.warn("피드 로드 실패", e);
-    }
-    setPostsReady(true);
-    if (showRefresh) {
-      setTimeout(() => setIsRefreshing(false), 600);
-    }
+      setPostsReady(true);
+    } catch (e) {}
+    if (showRefresh) setTimeout(() => setIsRefreshing(false), 600);
   }, []);
   useEffect(() => {
     loadFromFirebase();
-    // ✅ 성능 개선: 45초 간격 + 탭 숨김 시 자동 정지
-    let interval = null;
-    const startInterval = () => {
-      if (interval) return;
-      interval = setInterval(() => {
-        if (activeTab === 'feed' && document.visibilityState === 'visible') {
-          loadFromFirebase();
-        }
-      }, 45000); // 10초→45초로 늘려 Firebase 트래픽 대폭 감소
+    let iv = null;
+    const start = () => {
+      if (iv) return;
+      iv = setInterval(() => {
+        if (activeTab === 'feed' && document.visibilityState === 'visible') loadFromFirebase();
+      }, 45000);
     };
-    const stopInterval = () => {
-      clearInterval(interval);
-      interval = null;
+    const stop = () => {
+      clearInterval(iv);
+      iv = null;
     };
-    const onVisibility = () => document.hidden ? stopInterval() : startInterval();
-    startInterval();
-    document.addEventListener('visibilitychange', onVisibility);
+    const onVis = () => document.hidden ? stop() : start();
+    start();
+    document.addEventListener('visibilitychange', onVis);
     return () => {
-      stopInterval();
-      document.removeEventListener('visibilitychange', onVisibility);
+      stop();
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [loadFromFirebase, activeTab]);
   useEffect(() => {
@@ -1012,7 +941,23 @@ function App() {
     if (currentUser) LS.set("dc_current_user", currentUser);
   }, [currentUser]);
 
-  // ✅ FIX 4: 알림 탭 진입 시 알림 로드 (러브콜 + 응원/댓글)
+  // 로그인 화면: 캐시 즉시 표시 + 백그라운드 갱신
+  useEffect(() => {
+    if (screen !== "login") return;
+    const cached = LS.get("dc_users_cache", []);
+    if (cached.length === 0) setSavedUsersLoading(true);
+    FB.get("users").then(data => {
+      if (data) {
+        const users = Object.values(data).map(({
+          pic,
+          ...r
+        }) => r);
+        setSavedUsers(users);
+        LS.set("dc_users_cache", users);
+      }
+      setSavedUsersLoading(false);
+    }).catch(() => setSavedUsersLoading(false));
+  }, [screen]);
   useEffect(() => {
     if (activeTab !== 'notify' || !currentUser || userType !== 'student') return;
     FB.get(`lovecalls/${currentUser.id}`).then(data => {
@@ -1029,25 +974,27 @@ function App() {
     });
   }, [currentUser, userType]);
 
-  // 관리자 체크 - 이름에 "전예원" 포함하면 관리자 (공백 무관)
-  const isAdmin = !!(currentUser?.name?.trim().includes("전예원") && userType === "student");
-
-  // 관리자 계정 목록 로드 (조건부 반환 이전에 선언해야 함)
+  // ✅ 변경1: 자기소개서 로드
   useEffect(() => {
-    if (activeTab !== "profile" || adminSubTab !== "accounts" || !isAdmin) return;
-    setAdminUsersLoading(true);
-    FB.get("users").then(data => {
-      setAdminUsers(data ? Object.values(data) : []);
-      setAdminUsersLoading(false);
-    }).catch(() => setAdminUsersLoading(false));
-  }, [activeTab, adminSubTab, isAdmin]);
-
-  /* ── 파일 처리 ── */
+    if (activeTab !== 'profile' || !currentUser?.id) return;
+    FB.get(`resumes/${currentUser.id}`).then(data => {
+      if (data?.text) setResumeText(data.text);
+    });
+  }, [activeTab, currentUser]);
+  const saveResume = async () => {
+    setResumeSaving(true);
+    await FB.set(`resumes/${currentUser.id}`, {
+      text: resumeText,
+      updatedAt: Date.now()
+    });
+    setResumeSaving(false);
+    toast("✅ 자기소개서가 저장됐어요!");
+  };
   const pickFiles = async e => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    const results = await Promise.all(files.map(f => compressFile(f)));
-    setMediaList(prev => [...prev, ...results]);
+    const r = await Promise.all(files.map(f => compressFile(f)));
+    setMediaList(prev => [...prev, ...r]);
     e.target.value = "";
   };
   const pickSingleFile = async (e, onDone) => {
@@ -1057,8 +1004,6 @@ function App() {
     onDone(r.url);
     e.target.value = "";
   };
-
-  /* ── 회원가입 ── */
   const handleRegister = async () => {
     if (!formName.trim()) {
       toast("✏️ 이름을 입력해주세요!");
@@ -1068,33 +1013,24 @@ function App() {
     const users = usersData ? Object.values(usersData) : [];
     const exist = users.find(u => u.name === formName.trim() && u.school === (formSchool.trim() || ""));
     if (exist) {
-      // 사진은 userPics에서 별도 로드
-      const pic = await FB.get(`userPics/${exist.id}`);
-      const userWithPic = {
+      setCurrentUser({
         ...exist,
-        pic: pic || null
-      };
-      setCurrentUser(userWithPic);
+        pic: exist.pic || formPic
+      });
       setUserType("student");
       setScreen("main");
       toast(`👋 다시 만나요, ${exist.name}님!`);
       return;
     }
-    // users/ 에는 사진 없이 경량 정보만 저장
     const newUser = {
       id: "u" + Date.now(),
       name: formName.trim(),
       school: formSchool.trim(),
-      avatar: formAvatar
-    };
-    await FB.set(`users/${newUser.id}`, newUser);
-    // 사진은 userPics/ 에 분리 저장
-    if (formPic) await FB.set(`userPics/${newUser.id}`, formPic);
-    const userWithPic = {
-      ...newUser,
+      avatar: formAvatar,
       pic: formPic
     };
-    setCurrentUser(userWithPic);
+    await FB.set(`users/${newUser.id}`, newUser);
+    setCurrentUser(newUser);
     setUserType("student");
     setScreen("main");
     toast(`🎉 환영해요, ${newUser.name}님!`);
@@ -1108,20 +1044,14 @@ function App() {
     const users = usersData ? Object.values(usersData) : [];
     const found = users.find(u => u.name === formName.trim() && u.school === (formSchool.trim() || ""));
     if (!found) {
-      toast("❌ 일치하는 계정이 없어요. 새로 가입해주세요!");
+      toast("❌ 일치하는 계정이 없어요.");
       return;
     }
-    const pic = await FB.get(`userPics/${found.id}`);
-    setCurrentUser({
-      ...found,
-      pic: pic || null
-    });
+    setCurrentUser(found);
     setUserType("student");
     setScreen("main");
     toast(`👋 반가워요, ${found.name}님!`);
   };
-
-  /* ── 게시물 업로드 ── */
   const handleUpload = async () => {
     if (!desc.trim() && mediaList.length === 0) {
       toast("📝 사진이나 내용을 추가해주세요!");
@@ -1155,18 +1085,16 @@ function App() {
       setSelfScore(50);
       setSelfPraise("");
       setSyncStatus("saved");
-      toast("🎉 업로드 완료! 모든 기기에서 볼 수 있어요!");
+      toast("🎉 업로드 완료!");
       setActiveTab("feed");
     } catch (e) {
       setSyncStatus("error");
-      toast("⚠️ 업로드 실패. 인터넷 연결을 확인해주세요.");
+      toast("⚠️ 업로드 실패.");
     } finally {
       setUploading(false);
       setTimeout(() => setSyncStatus(""), 3000);
     }
   };
-
-  /* ✅ FIX 4: 응원(좋아요) - 알림 저장 추가 */
   const handleLike = async post => {
     const isLiked = !!liked[post.id];
     setLiked(p => ({
@@ -1187,11 +1115,10 @@ function App() {
     });
     if (!isLiked) {
       toast("💛 응원을 보냈어요!");
-      // ✅ FIX 4: 내 게시물이 아닐 때만 알림 저장
       if (post.userId && post.userId !== currentUser?.id && currentUser && post.userId !== 'demo') {
-        const notifId = "n" + Date.now();
-        const notif = {
-          id: notifId,
+        const nid = "n" + Date.now();
+        FB.set(`notifications/${post.userId}/${nid}`, {
+          id: nid,
           type: 'like',
           from: currentUser.name,
           fromAvatar: currentUser.avatar || "👤",
@@ -1205,13 +1132,10 @@ function App() {
             hour: "2-digit",
             minute: "2-digit"
           })
-        };
-        FB.set(`notifications/${post.userId}/${notifId}`, notif);
+        });
       }
     }
   };
-
-  /* ── 설정 저장 ── */
   const saveSettings = async () => {
     const updated = {
       ...currentUser,
@@ -1239,8 +1163,6 @@ function App() {
     setShowSettings(false);
     toast("✅ 프로필이 저장됐어요!");
   };
-
-  /* ── 게시물 삭제 ── */
   const handleDelete = async post => {
     setPosts(prev => prev.filter(p => p.id !== post.id));
     setManageModal(null);
@@ -1248,15 +1170,13 @@ function App() {
     await FB.remove(`posts/${post.id}`);
     toast("🗑️ 게시물이 삭제됐어요.");
   };
-
-  /* ── 게시물 수정 ── */
   const handleEditSave = async (postId, newDesc, newTag, newProgress, newMediaList) => {
     const updated = {
       ...posts.find(p => p.id === postId),
       desc: newDesc,
       tag: newTag,
       progress: newProgress,
-      mediaList: newMediaList
+      mediaList: newMediaList || posts.find(p => p.id === postId)?.mediaList || []
     };
     setPosts(prev => prev.map(p => p.id === postId ? updated : p));
     if (detail?.id === postId) setDetail(updated);
@@ -1265,127 +1185,10 @@ function App() {
       desc: newDesc,
       tag: newTag,
       progress: newProgress,
-      mediaList: newMediaList
+      mediaList: updated.mediaList
     });
     toast("✅ 게시물이 수정됐어요!");
   };
-
-  // 댓글 하트 상태 (localStorage)
-  const [commentLiked, setCommentLiked] = useState(() => LS.get("dc_comment_liked", {}));
-  useEffect(() => {
-    LS.set("dc_comment_liked", commentLiked);
-  }, [commentLiked]);
-
-  /* ── 댓글 하트 ── */
-  const handleCommentLike = async (post, commentIdx) => {
-    const key = `${post.id}_${commentIdx}`;
-    const isLiked = !!commentLiked[key];
-    setCommentLiked(prev => ({
-      ...prev,
-      [key]: !isLiked
-    }));
-    const newCommentList = (post.commentList || []).map((c, i) => {
-      if (i !== commentIdx) return c;
-      const newLikes = (c.likes || 0) + (isLiked ? -1 : 1);
-      return {
-        ...c,
-        likes: newLikes
-      };
-    });
-    setPosts(prev => prev.map(p => p.id === post.id ? {
-      ...p,
-      commentList: newCommentList
-    } : p));
-    setCommentModal(prev => prev && prev.id === post.id ? {
-      ...prev,
-      commentList: newCommentList
-    } : prev);
-    if (detail?.id === post.id) setDetail(d => ({
-      ...d,
-      commentList: newCommentList
-    }));
-    await FB.update(`posts/${post.id}`, {
-      commentList: newCommentList
-    });
-    // 하트 눌렀을 때만 알림 (내 댓글 아닐 때)
-    if (!isLiked && currentUser) {
-      const comment = (post.commentList || [])[commentIdx];
-      // comment.userId 없으면 post 작성자에게 폴백 (구 댓글 호환)
-      const commentAuthorId = comment?.userId || post.userId;
-      if (commentAuthorId && commentAuthorId !== currentUser.id && commentAuthorId !== 'demo') {
-        const notifId = "n" + Date.now();
-        const notif = {
-          id: notifId,
-          type: 'commentLike',
-          from: currentUser.name,
-          fromAvatar: currentUser.avatar || "👤",
-          fromRole: currentUser.role === 'company' ? 'company' : 'student',
-          postId: post.id,
-          commentText: (comment?.text || "").substring(0, 40),
-          tag: post.tag,
-          createdAt: Date.now(),
-          time: new Date().toLocaleString("ko-KR", {
-            month: "numeric",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-          })
-        };
-        FB.set(`notifications/${commentAuthorId}/${notifId}`, notif);
-      }
-    }
-  };
-
-  /* ── 댓글 삭제 ── */
-  const handleCommentDelete = async (postId, commentIdx) => {
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-    const newCommentList = (post.commentList || []).filter((_, i) => i !== commentIdx);
-    setPosts(prev => prev.map(p => p.id === postId ? {
-      ...p,
-      commentList: newCommentList
-    } : p));
-    setCommentModal(prev => prev && prev.id === postId ? {
-      ...prev,
-      commentList: newCommentList
-    } : prev);
-    if (detail?.id === postId) setDetail(d => ({
-      ...d,
-      commentList: newCommentList
-    }));
-    await FB.update(`posts/${postId}`, {
-      commentList: newCommentList
-    });
-    toast("🗑️ 댓글이 삭제됐어요.");
-  };
-
-  /* ── 댓글 수정 ── */
-  const handleCommentEdit = async (postId, commentIdx, newText) => {
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-    const newCommentList = (post.commentList || []).map((c, i) => i === commentIdx ? {
-      ...c,
-      text: newText,
-      edited: true
-    } : c);
-    setPosts(prev => prev.map(p => p.id === postId ? {
-      ...p,
-      commentList: newCommentList
-    } : p));
-    setCommentModal(prev => prev && prev.id === postId ? {
-      ...prev,
-      commentList: newCommentList
-    } : prev);
-    if (detail?.id === postId) setDetail(d => ({
-      ...d,
-      commentList: newCommentList
-    }));
-    await FB.update(`posts/${postId}`, {
-      commentList: newCommentList
-    });
-  };
-
-  /* ✅ FIX 4: 댓글 제출 - 알림 저장 추가 */
   const handleCommentSubmit = async (postId, comment) => {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
@@ -1405,11 +1208,10 @@ function App() {
     await FB.update(`posts/${postId}`, {
       commentList: newCommentList
     });
-    // ✅ FIX 4: 내 게시물이 아닐 때만 댓글 알림 저장
     if (post.userId && post.userId !== currentUser?.id && currentUser && post.userId !== 'demo') {
-      const notifId = "n" + Date.now();
-      const notif = {
-        id: notifId,
+      const nid = "n" + Date.now();
+      FB.set(`notifications/${post.userId}/${nid}`, {
+        id: nid,
         type: 'comment',
         from: currentUser.name,
         fromAvatar: currentUser.avatar || "👤",
@@ -1424,28 +1226,64 @@ function App() {
           hour: "2-digit",
           minute: "2-digit"
         })
-      };
-      FB.set(`notifications/${post.userId}/${notifId}`, notif);
+      });
     }
   };
-
-  /* ── 가입된 계정 목록 (Firebase 전체) ── */
-  const [savedUsers, setSavedUsers] = useState([]);
-  const [savedUsersLoading, setSavedUsersLoading] = useState(false);
-  useEffect(() => {
-    if (screen !== "login") return;
-    setSavedUsersLoading(true);
-    FB.get("users").then(data => {
-      setSavedUsers(data ? Object.values(data) : []);
-      setSavedUsersLoading(false);
-    }).catch(() => setSavedUsersLoading(false));
-  }, [screen]);
-
-  /* ══ SPLASH ══ */
+  const handleLoveSend = p => {
+    setLoved(v => ({
+      ...v,
+      [p.id]: true
+    }));
+    setLoveModal(null);
+    toast(`💌 ${p.name} 학생에게 러브콜을 보냈어요!`);
+    const now = Date.now();
+    const callData = {
+      from: currentUser?.name || "기업담당자",
+      tag: p.tag,
+      postId: p.id,
+      createdAt: now,
+      time: new Date().toLocaleString("ko-KR", {
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      })
+    };
+    FB.set(`lovecalls/${p.userId}/lc${now}`, callData);
+    if (currentUser?.id) {
+      const sentData = {
+        postId: p.id,
+        studentName: p.name,
+        studentAvatar: p.avatar || "👤",
+        studentSchool: p.school || "",
+        tag: p.tag,
+        desc: p.desc || "",
+        sentAt: now,
+        time: new Date().toLocaleString("ko-KR", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      };
+      FB.set(`companyLovecalls/${currentUser.id}/lc${now}`, sentData);
+      setSentLovecalls(prev => [sentData, ...prev]);
+    }
+  };
+  const isAdmin = !!(currentUser?.name?.trim().includes("전예원") && userType === "student");
+  const allNotifications = [...lovecalls.map(n => ({
+    ...n,
+    _type: 'lovecall',
+    _createdAt: n.createdAt || 0
+  })), ...notifications.map(n => ({
+    ...n,
+    _type: n.type,
+    _createdAt: n.createdAt || 0
+  }))].sort((a, b) => b._createdAt - a._createdAt);
   if (screen === "splash") return /*#__PURE__*/React.createElement("div", {
     style: {
-      width: "100%",
-      height: "100vh",
+      position: "fixed",
+      inset: 0,
       background: `linear-gradient(145deg,${C.primary},${C.gold})`,
       display: "flex",
       flexDirection: "column",
@@ -1494,15 +1332,7 @@ function App() {
       borderRadius: 2,
       animation: "shimmer 1.4s linear infinite"
     }
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 20,
-      fontSize: 11,
-      color: "rgba(255,255,255,0.6)"
-    }
-  }, "\uD83D\uDFE2 \uC11C\uBC84 \uC5F0\uACB0\uB428"));
-
-  /* ══ LOGIN ══ */
+  })));
   if (screen === "login") return /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
@@ -1599,7 +1429,7 @@ function App() {
       fontSize: 12,
       boxShadow: loginTab === val ? "0 2px 8px rgba(0,0,0,0.08)" : "none"
     }
-  }, lbl))), loginTab === "existing" ? /*#__PURE__*/React.createElement(React.Fragment, null, savedUsersLoading ? /*#__PURE__*/React.createElement("div", {
+  }, lbl))), loginTab === "existing" ? /*#__PURE__*/React.createElement(React.Fragment, null, savedUsersLoading && savedUsers.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "22px 0",
@@ -1631,7 +1461,7 @@ function App() {
       marginBottom: 8,
       fontWeight: 600
     }
-  }, "\uD83C\uDF10 \uAC00\uC785\uB41C \uACC4\uC815 (\uC804\uCCB4 \uAE30\uAE30 \uACF5\uC720)"), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83C\uDF10 \uAC00\uC785\uB41C \uACC4\uC815"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -2023,34 +1853,30 @@ function App() {
       fontSize: 13
     }
   }, "\uCDE8\uC18C")))));
-
-  /* ══ DETAIL ══ */
   if (detail) {
     const s = detail;
     const m = JOB_META[s.tag] || {
       color: C.primary,
       emoji: "✨"
     };
-    // 이 학생의 모든 게시물
-    const studentPosts = posts.filter(p => p.userId === s.userId && (!p.hidden || isAdmin)).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    // 전체 통계
+    const studentPosts = posts.filter(p => p.userId === s.userId).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     const totalLikes = studentPosts.reduce((sum, p) => sum + (p.likes || 0), 0);
     const totalComments = studentPosts.reduce((sum, p) => sum + (p.commentList || []).length, 0);
-    // 갤러리: 모든 미디어 아이템
     const allMedia = studentPosts.flatMap(p => (p.mediaList || []).map((item, i) => ({
       item,
       post: p,
       idx: i
     })));
     return /*#__PURE__*/React.createElement("div", {
-      className: "app-shell",
       style: {
-        width: "100%",
+        position: "fixed",
+        inset: 0,
         background: C.surface,
-        maxWidth: 520,
-        margin: "0 auto",
         overflowY: "auto",
-        overscrollBehavior: "contain"
+        overscrollBehavior: "contain",
+        maxWidth: 520,
+        left: "50%",
+        transform: "translateX(-50%)"
       }
     }, /*#__PURE__*/React.createElement(Toast, {
       msg: toastMsg
@@ -2129,8 +1955,7 @@ function App() {
         background: "rgba(255,255,255,0.85)",
         borderRadius: 12,
         padding: "11px 6px",
-        textAlign: "center",
-        backdropFilter: "blur(8px)"
+        textAlign: "center"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2196,12 +2021,7 @@ function App() {
         fontSize: 14,
         fontWeight: 600
       }
-    }, "\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB41C \uC0AC\uC9C4\uC774 \uC5C6\uC5B4\uC694"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        marginTop: 6
-      }
-    }, "\uAC8C\uC2DC\uBB3C \uD0ED\uC5D0\uC11C \uAE30\uB85D\uC744 \uBCFC \uC218 \uC788\uC5B4\uC694")) : /*#__PURE__*/React.createElement("div", {
+    }, "\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uB41C \uC0AC\uC9C4\uC774 \uC5C6\uC5B4\uC694")) : /*#__PURE__*/React.createElement("div", {
       style: {
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
@@ -2211,78 +2031,74 @@ function App() {
       item,
       post,
       idx
-    }, i) => {
-      const pm = JOB_META[post.tag] || {
-        color: C.primary,
-        emoji: "✨"
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        key: i,
-        onClick: () => {
-          if (item.type?.startsWith("video")) return;
-          setLightbox({
-            items: post.mediaList,
-            index: idx
-          });
-        },
-        style: {
-          aspectRatio: "1",
-          borderRadius: 10,
-          overflow: "hidden",
-          cursor: "pointer",
-          position: "relative",
-          animation: `fadeUp 0.3s ${Math.min(i, 8) * 0.03}s ease forwards`,
-          opacity: 0
-        }
-      }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("video", {
-        src: item.url,
-        style: {
-          width: "100%",
-          height: "100%",
-          objectFit: "cover"
-        }
-      }), /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "rgba(0,0,0,0.22)"
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 22,
-          color: "#fff"
-        }
-      }, "\u25B6"))) : /*#__PURE__*/React.createElement("img", {
-        src: item.url,
-        style: {
-          width: "100%",
-          height: "100%",
-          objectFit: "cover"
-        },
-        alt: ""
-      }), /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "linear-gradient(transparent,rgba(0,0,0,0.55))",
-          padding: "14px 5px 5px"
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 8,
-          color: "#fff",
-          fontWeight: 700,
-          background: `${pm.color}cc`,
-          borderRadius: 4,
-          padding: "2px 5px"
-        }
-      }, post.tag?.replace("#", ""))));
-    }))), detailTab === "posts" && /*#__PURE__*/React.createElement("div", {
+    }, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      onClick: () => {
+        if (item.type?.startsWith("video")) return;
+        setLightbox({
+          items: post.mediaList,
+          index: idx
+        });
+      },
+      style: {
+        aspectRatio: "1",
+        borderRadius: 10,
+        overflow: "hidden",
+        cursor: "pointer",
+        position: "relative",
+        animation: `fadeUp 0.3s ${Math.min(i, 8) * 0.03}s ease forwards`,
+        opacity: 0
+      }
+    }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("video", {
+      src: item.url,
+      style: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover"
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.22)"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 22,
+        color: "#fff"
+      }
+    }, "\u25B6"))) : /*#__PURE__*/React.createElement("img", {
+      src: item.url,
+      style: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover"
+      },
+      alt: ""
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: "linear-gradient(transparent,rgba(0,0,0,0.55))",
+        padding: "14px 5px 5px"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 8,
+        color: "#fff",
+        fontWeight: 700,
+        background: `${(JOB_META[post.tag] || {
+          color: C.primary
+        }).color}cc`,
+        borderRadius: 4,
+        padding: "2px 5px"
+      }
+    }, post.tag?.replace("#", ""))))))), detailTab === "posts" && /*#__PURE__*/React.createElement("div", {
       style: {
         padding: "12px 13px 120px"
       }
@@ -2314,13 +2130,11 @@ function App() {
       loved: !!loved[post.id],
       onLike: handleLike,
       onLove: p => setLoveModal(p),
-      onOpen: () => {} // 이미 같은 학생 프로필이라 재진입 불필요
-      ,
+      onOpen: () => {},
       onComment: p => setCommentModal(p),
       onManage: p => setManageModal(p),
       userType: userType,
       currentUserId: currentUser?.id,
-      isAdmin: isAdmin,
       onImageClick: (post, idx) => setLightbox({
         items: post.mediaList || [],
         index: idx
@@ -2356,94 +2170,13 @@ function App() {
       post: commentModal,
       currentUser: currentUser,
       onClose: () => setCommentModal(null),
-      onSubmit: handleCommentSubmit,
-      onCommentLike: handleCommentLike,
-      commentLiked: commentLiked,
-      onCommentDelete: handleCommentDelete,
-      onCommentEdit: handleCommentEdit,
-      isAdmin: isAdmin
-    }), manageModal && /*#__PURE__*/React.createElement(ManageModal, {
-      post: manageModal,
-      onClose: () => setManageModal(null),
-      onEdit: p => {
-        setEditModal(p);
-        setManageModal(null);
-      },
-      onDelete: handleDelete,
-      onHide: handleHidePost,
-      isAdmin: isAdmin
-    }), editModal && /*#__PURE__*/React.createElement(EditModal, {
-      post: editModal,
-      onClose: () => setEditModal(null),
-      onSave: handleEditSave
+      onSubmit: handleCommentSubmit
     }), lightbox && /*#__PURE__*/React.createElement(Lightbox, {
       items: lightbox.items,
       initialIndex: lightbox.index,
       onClose: () => setLightbox(null)
     }));
   }
-
-  /* ── 러브콜 전송 공통 함수 ── */
-  const handleLoveSend = p => {
-    setLoved(v => ({
-      ...v,
-      [p.id]: true
-    }));
-    setLoveModal(null);
-    toast(`💌 ${p.name} 학생에게 러브콜을 보냈어요!`);
-    const now = Date.now();
-    const callData = {
-      from: currentUser?.name || "기업담당자",
-      tag: p.tag,
-      postId: p.id,
-      createdAt: now,
-      time: new Date().toLocaleString("ko-KR", {
-        month: "numeric",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      })
-    };
-    FB.set(`lovecalls/${p.userId}/lc${now}`, callData);
-    if (currentUser?.id) {
-      const sentData = {
-        postId: p.id,
-        studentName: p.name,
-        studentAvatar: p.avatar || "👤",
-        studentSchool: p.school || "",
-        tag: p.tag,
-        desc: p.desc || "",
-        sentAt: now,
-        time: new Date().toLocaleString("ko-KR", {
-          month: "numeric",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        })
-      };
-      FB.set(`companyLovecalls/${currentUser.id}/lc${now}`, sentData);
-      setSentLovecalls(prev => [sentData, ...prev]);
-    }
-  };
-
-  /* ══ MAIN ══ */
-
-  // 게시물 숨김/공개 토글
-  const handleHidePost = async post => {
-    const newHidden = !post.hidden;
-    setPosts(prev => prev.map(p => p.id === post.id ? {
-      ...p,
-      hidden: newHidden
-    } : p));
-    if (detail?.id === post.id) setDetail(d => ({
-      ...d,
-      hidden: newHidden
-    }));
-    await FB.update(`posts/${post.id}`, {
-      hidden: newHidden
-    });
-    toast(newHidden ? "🙈 게시물을 숨겼어요" : "👁️ 게시물을 다시 공개했어요");
-  };
   const tabs = [{
     id: "feed",
     icon: "🏠",
@@ -2465,37 +2198,16 @@ function App() {
     icon: isAdmin ? "🔧" : "👤",
     label: isAdmin ? "관리" : "내 정보"
   }];
-  // 관리자는 숨겨진 게시물도 볼 수 있음 (숨김 배지 표시)
-  const filtered = (filterTag === "전체" ? posts : posts.filter(p => p.tag === filterTag)).filter(p => isAdmin || !p.hidden);
+  const filtered = (filterTag === "전체" ? posts : posts.filter(p => p.tag === filterTag)).filter(p => !p.hidden);
   const tagColor = JOB_META[tag]?.color || C.primary;
-
-  // ✅ FIX 4: 알림 탭에서 쓸 통합 알림 목록
-  const allNotifications = [...lovecalls.map(n => ({
-    ...n,
-    _type: 'lovecall',
-    _createdAt: n.createdAt || 0
-  })), ...notifications.map(n => ({
-    ...n,
-    _type: n.type,
-    _createdAt: n.createdAt || 0
-  }))].sort((a, b) => b._createdAt - a._createdAt);
   return /*#__PURE__*/React.createElement("div", {
-    className: "app-shell",
-    style: {
-      width: "100%",
-      background: C.surface,
-      maxWidth: 520,
-      margin: "0 auto",
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden"
-    }
+    className: "app-shell"
   }, /*#__PURE__*/React.createElement(Toast, {
     msg: toastMsg
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
-      background: "rgba(250,250,248,0.95)",
+      background: "rgba(250,250,248,0.96)",
       backdropFilter: "blur(12px)",
       padding: "13px 16px 9px",
       borderBottom: `1px solid ${C.g200}`,
@@ -2589,7 +2301,7 @@ function App() {
       fontSize: 10,
       color: C.g400
     }
-  }, currentUser?.school || userType === "company" ? "기업 담당자" : "")), /*#__PURE__*/React.createElement("button", {
+  }, currentUser?.school || "")), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setShowAccountMenu(false);
@@ -2636,12 +2348,7 @@ function App() {
     },
     onClick: () => setActiveTab("notify")
   }, "\uD83D\uDD14"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      overflowX: "hidden",
-      overscrollBehavior: "contain"
-    },
+    className: "app-scroll",
     ref: feedRef,
     onTouchStart: e => {
       if (activeTab !== "feed") return;
@@ -2701,7 +2408,7 @@ function App() {
     style: {
       borderRadius: 22,
       background: `linear-gradient(135deg,${C.navy},${C.navyMid})`,
-      padding: "18px 18px",
+      padding: "18px",
       color: "#fff",
       marginBottom: 13,
       position: "relative",
@@ -2798,26 +2505,7 @@ function App() {
     key: post.id,
     style: {
       animation: `fadeUp 0.42s ${Math.min(i, 4) * 0.07}s ease forwards`,
-      opacity: 0,
-      position: "relative"
-    }
-  }, isAdmin && post.hidden && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: 10,
-      left: 10,
-      zIndex: 10,
-      background: "#E53935",
-      color: "#fff",
-      borderRadius: 8,
-      padding: "3px 10px",
-      fontSize: 11,
-      fontWeight: 700
-    }
-  }, "\uD83D\uDE48 \uC228\uAE40 \uCC98\uB9AC\uB428"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      opacity: post.hidden ? 0.45 : 1,
-      transition: "opacity .2s"
+      opacity: 0
     }
   }, /*#__PURE__*/React.createElement(PostCard, {
     post: post,
@@ -2830,12 +2518,11 @@ function App() {
     onManage: p => setManageModal(p),
     userType: userType,
     currentUserId: currentUser?.id,
-    isAdmin: isAdmin,
     onImageClick: (post, idx) => setLightbox({
       items: post.mediaList || [],
       index: idx
     })
-  })))), postsReady && filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }))), postsReady && filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "56px 20px",
@@ -2968,15 +2655,14 @@ function App() {
         color: C.navy,
         marginBottom: 10
       }
-    }, "\uD83D\uDCCA \uC9C1\uBB34\uBCC4 \uD559\uC0DD \uD604\uD669"), JOB_TAGS.map(tag => {
-      const m = JOB_META[tag] || {
-        color: C.primary,
-        emoji: "✨"
+    }, "\uD83D\uDCCA \uC9C1\uBB34\uBCC4 \uD559\uC0DD \uD604\uD669"), JOB_TAGS.map(t => {
+      const m = JOB_META[t] || {
+        color: C.primary
       };
-      const count = posts.filter(p => p.tag === tag && !p.hidden).length;
+      const cnt = posts.filter(p => p.tag === t).length;
       return /*#__PURE__*/React.createElement("div", {
-        key: tag,
-        onClick: () => setSearchQuery(tag.replace("#", "")),
+        key: t,
+        onClick: () => setSearchQuery(t.replace("#", "")),
         style: {
           background: C.white,
           borderRadius: 14,
@@ -3002,7 +2688,7 @@ function App() {
           fontWeight: 700,
           color: C.navy
         }
-      }, tag.replace("#", "")), /*#__PURE__*/React.createElement("div", {
+      }, t.replace("#", "")), /*#__PURE__*/React.createElement("div", {
         style: {
           height: 6,
           background: C.g100,
@@ -3013,7 +2699,7 @@ function App() {
       }, /*#__PURE__*/React.createElement("div", {
         style: {
           height: "100%",
-          width: `${Math.min(count / 10 * 100, 100)}%`,
+          width: `${Math.min(cnt / 10 * 100, 100)}%`,
           background: m.color,
           borderRadius: 3
         }
@@ -3023,7 +2709,7 @@ function App() {
           fontWeight: 900,
           color: m.color
         }
-      }, count, "\uAC1C"));
+      }, cnt, "\uAC1C"));
     })));
   })(), activeTab === "upload" && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3207,10 +2893,20 @@ function App() {
       padding: "10px 12px"
     }
   }, /*#__PURE__*/React.createElement("div", {
-    style: { fontSize: 11, fontWeight: 700, color: C.g400, marginBottom: 5 }
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      color: C.g400,
+      marginBottom: 5
+    }
   }, "\uD83D\uDCA1 \uC608\uC2DC"), /*#__PURE__*/React.createElement("div", {
-    style: { fontSize: 11, color: C.g600, lineHeight: 1.8, whiteSpace: "pre-wrap" }
-  }, "* \uBC25 \uC9D3\uAE30 \uBC0F \uB204\uB8E1\uC9C0 \uBC18\uC8FD\uD558\uAE30\n- \uCC39\uC30C\uACFC \uBB3C 4:6 \uBE44\uC728 \uB9DE\uC8FC\uC5B4 \uBC25 \uC9D3\uAE30\n- \uBC25\uC5D0 \uC77C\uC815 \uBE44\uC728\uC758 \uBB3C \uB123\uC5B4 \uBC18\uC8FD \uB9CC\uB4E4\uAE30\n- \uC624\uBE10 \uC628\uB3C4 \uC124\uC815\uD558\uAE30"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.g600,
+      lineHeight: 1.8,
+      whiteSpace: "pre-wrap"
+    }
+  }, "* 밥 짓기 및 누룽지 반죽하기\n- 찹쌀과 물 4:6 비율 맞추어 밥 짓기\n- 밥에 일정 비율의 물 넣어 반죽 만들기\n- 오븐 온도 설정하기"))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: C.white,
       borderRadius: 18,
@@ -3350,13 +3046,7 @@ function App() {
       color: C.navy,
       marginBottom: 4
     }
-  }, "\uD83C\uDF1F \uC624\uB298 \uC0C8\uB85C \uBC30\uC6B4 \uC810\uACFC \uC140\uD504 \uCE6D\uCC2C"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: C.g400,
-      marginBottom: 10
-    }
-  }, "\uC798\uD55C \uC810, \uCC98\uC74C \uD574\uBCF8 \uAC83, \uC2A4\uC2A4\uB85C \uCE6D\uCC2C\uD558\uACE0 \uC2F6\uC740 \uAC83\uC744 \uC801\uC5B4\uBCF4\uC138\uC694 \uD83D\uDCAA"), /*#__PURE__*/React.createElement("textarea", {
+  }, "\uD83C\uDF1F \uB098\uC5D0\uAC8C \uD558\uB294 \uC140\uD504 \uCE6D\uCC2C \uD55C\uB9C8\uB514"), /*#__PURE__*/React.createElement("textarea", {
     placeholder: "예) 처음으로 혼자 카운터를 맡았어요! 실수 없이 해내서 정말 뿌듯해요 🎉",
     value: selfPraise,
     onChange: e => setSelfPraise(e.target.value),
@@ -3423,21 +3113,9 @@ function App() {
     }
   }, "\uD83D\uDD14 \uC54C\uB9BC"), userType === "student" ? allNotifications.length > 0 ? allNotifications.map((n, i) => {
     const m = JOB_META[n.tag] || {
-      color: C.primary,
-      emoji: "✨"
+      color: C.primary
     };
-    // 알림 클릭 → 해당 게시물로 이동
-    const goToPost = () => {
-      if (!n.postId) return;
-      const found = posts.find(p => p.id === n.postId);
-      if (found) {
-        openDetail(found);
-      } else {
-        toast("게시물을 찾을 수 없어요.");
-      }
-    };
-    const hasPost = !!n.postId;
-    const cardStyle = {
+    const card = {
       background: C.white,
       borderRadius: 16,
       padding: "14px",
@@ -3447,16 +3125,11 @@ function App() {
       gap: 12,
       alignItems: "flex-start",
       animation: `fadeUp 0.4s ${Math.min(i, 6) * 0.06}s ease forwards`,
-      opacity: 0,
-      cursor: hasPost ? "pointer" : "default",
-      transition: "background .15s"
+      opacity: 0
     };
-    // 러브콜
     if (n._type === 'lovecall') return /*#__PURE__*/React.createElement("div", {
       key: i,
-      className: "btn",
-      style: cardStyle,
-      onClick: hasPost ? goToPost : undefined
+      style: card
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         width: 44,
@@ -3506,20 +3179,10 @@ function App() {
         fontSize: 11,
         color: C.g400
       }
-    }, timeAgo(n.createdAt) || n.time))), hasPost && /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: C.g400,
-        fontSize: 16,
-        flexShrink: 0,
-        alignSelf: "center"
-      }
-    }, "\u203A"));
-    // 응원(좋아요)
+    }, timeAgo(n.createdAt) || n.time))));
     if (n._type === 'like') return /*#__PURE__*/React.createElement("div", {
       key: i,
-      className: "btn",
-      style: cardStyle,
-      onClick: hasPost ? goToPost : undefined
+      style: card
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         width: 44,
@@ -3576,20 +3239,10 @@ function App() {
         fontSize: 11,
         color: C.g400
       }
-    }, timeAgo(n.createdAt) || n.time))), hasPost && /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: C.g400,
-        fontSize: 16,
-        flexShrink: 0,
-        alignSelf: "center"
-      }
-    }, "\u203A"));
-    // 댓글
+    }, timeAgo(n.createdAt) || n.time))));
     if (n._type === 'comment') return /*#__PURE__*/React.createElement("div", {
       key: i,
-      className: "btn",
-      style: cardStyle,
-      onClick: hasPost ? goToPost : undefined
+      style: card
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         width: 44,
@@ -3599,14 +3252,10 @@ function App() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 20,
+        fontSize: 18,
         flexShrink: 0
       }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 18
-      }
-    }, n.fromAvatar || "👤")), /*#__PURE__*/React.createElement("div", {
+    }, n.fromAvatar || "👤"), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1
       }
@@ -3653,92 +3302,7 @@ function App() {
         fontSize: 11,
         color: C.g400
       }
-    }, timeAgo(n.createdAt) || n.time))), hasPost && /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: C.g400,
-        fontSize: 16,
-        flexShrink: 0,
-        alignSelf: "center"
-      }
-    }, "\u203A"));
-    // 댓글 하트
-    if (n._type === 'commentLike') return /*#__PURE__*/React.createElement("div", {
-      key: i,
-      className: "btn",
-      style: cardStyle,
-      onClick: hasPost ? goToPost : undefined
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        background: "#FFF0F0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 22,
-        flexShrink: 0
-      }
-    }, "\u2764\uFE0F"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 13,
-        fontWeight: 600,
-        color: C.navy,
-        lineHeight: 1.5
-      }
-    }, n.fromRole === 'company' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: C.accent,
-        fontWeight: 700
-      }
-    }, "\uD83C\uDFE2 ", n.from), "\uB2D8\uC774 \uB0B4 \uB313\uAE00\uC744 \uC88B\uC544\uD574\uC694!") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: "#E53935",
-        fontWeight: 700
-      }
-    }, n.from), "\uB2D8\uC774 \uB0B4 \uB313\uAE00\uC744 \uC88B\uC544\uD574\uC694!")), n.commentText && /*#__PURE__*/React.createElement("div", {
-      style: {
-        marginTop: 5,
-        background: "#FFF0F0",
-        borderRadius: "4px 12px 12px 12px",
-        padding: "6px 10px",
-        fontSize: 12,
-        color: "#C62828",
-        lineHeight: 1.5
-      }
-    }, "\u2764\uFE0F \"", n.commentText, n.commentText.length >= 40 ? "..." : "", "\""), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        marginTop: 5
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        background: `${m.color}18`,
-        color: m.color,
-        borderRadius: 8,
-        padding: "2px 8px",
-        fontSize: 10,
-        fontWeight: 700
-      }
-    }, n.tag), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11,
-        color: C.g400
-      }
-    }, timeAgo(n.createdAt) || n.time))), hasPost && /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: C.g400,
-        fontSize: 16,
-        flexShrink: 0,
-        alignSelf: "center"
-      }
-    }, "\u203A"));
+    }, timeAgo(n.createdAt) || n.time))));
     return null;
   }) : /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3805,75 +3369,7 @@ function App() {
     style: {
       paddingBottom: 100
     }
-  }, isAdmin ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: `linear-gradient(135deg,${C.navy},${C.navyMid})`,
-      padding: "22px 16px 18px"
-    }
   }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 14,
-      alignItems: "center",
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 68,
-      height: 68,
-      borderRadius: 21,
-      background: "rgba(255,255,255,0.15)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 36
-    }
-  }, "\uD83D\uDD27"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 18,
-      fontWeight: 900,
-      color: "#fff"
-    }
-  }, currentUser?.name), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: "rgba(255,255,255,0.6)",
-      marginTop: 2
-    }
-  }, currentUser?.school || ""), /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-block",
-      marginTop: 8,
-      background: C.gold,
-      color: C.navy,
-      borderRadius: 10,
-      padding: "3px 12px",
-      fontSize: 11,
-      fontWeight: 900
-    }
-  }, "\u2B50 \uAD00\uB9AC\uC790"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      background: "rgba(255,255,255,0.1)",
-      borderRadius: 14,
-      padding: 4,
-      gap: 4
-    }
-  }, [["posts", "📋 게시물 관리"], ["accounts", "👥 계정 관리"]].map(([val, lbl]) => /*#__PURE__*/React.createElement("button", {
-    key: val,
-    className: "btn",
-    onClick: () => setAdminSubTab(val),
-    style: {
-      flex: 1,
-      padding: "9px 4px",
-      borderRadius: 11,
-      border: "none",
-      background: adminSubTab === val ? "rgba(255,255,255,0.92)" : "transparent",
-      color: adminSubTab === val ? C.navy : "rgba(255,255,255,0.75)",
-      fontWeight: adminSubTab === val ? 700 : 400,
-      fontSize: 12
-    }
-  }, lbl)))) : /*#__PURE__*/React.createElement("div", {
     style: {
       background: `linear-gradient(135deg,${C.primary}18,${C.gold}0a)`,
       padding: "22px 16px 18px"
@@ -3923,313 +3419,122 @@ function App() {
       fontWeight: 700,
       boxShadow: "0 2px 6px rgba(0,0,0,0.06)"
     }
-  }, "\uAC8C\uC2DC\uBB3C ", posts.filter(p => p.userId === currentUser?.id).length, "\uAC1C"))))), isAdmin && /*#__PURE__*/React.createElement("div", {
+  }, "\uAC8C\uC2DC\uBB3C ", posts.filter(p => p.userId === currentUser?.id).length, "\uAC1C"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "14px 14px 0"
     }
-  }, adminSubTab === "posts" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      color: C.navy
-    }
-  }, "\uC804\uCCB4 \uAC8C\uC2DC\uBB3C (", posts.filter(p => p.userId !== "demo").length, "\uAC1C)"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: C.g400
-    }
-  }, "\uC228\uAE40: ", posts.filter(p => p.hidden).length, "\uAC1C")), posts.filter(p => p.userId !== "demo").map((post, i) => {
-    const m = JOB_META[post.tag] || {
-      color: C.primary,
-      emoji: "✨"
-    };
-    return /*#__PURE__*/React.createElement("div", {
-      key: post.id,
+  }, userType === "student" && (() => {
+    // 최근 사진 미리보기
+    const myPosts = posts.filter(p => p.userId === currentUser?.id);
+    const previewItems = myPosts.flatMap(p => (p.mediaList || []).filter(m => !m.type?.startsWith("video")).map(m => ({
+      ...m,
+      post: p
+    }))).slice(0, 6);
+    return previewItems.length > 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
-        background: post.hidden ? `${C.g100}` : "#fff",
-        borderRadius: 14,
-        padding: "11px 12px",
-        marginBottom: 8,
-        boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-        border: post.hidden ? `1.5px solid #E53935` : `1.5px solid transparent`,
-        opacity: post.hidden ? 0.75 : 1,
-        animation: `fadeUp 0.3s ${Math.min(i, 6) * 0.04}s ease forwards`
+        background: C.white,
+        borderRadius: 16,
+        overflow: "hidden",
+        marginBottom: 9,
+        boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        display: "flex",
-        gap: 10,
-        alignItems: "flex-start"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 38,
-        height: 38,
-        borderRadius: 11,
-        background: `${m.color}18`,
+        padding: "13px 14px 10px",
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
-        fontSize: 20,
-        flexShrink: 0
+        justifyContent: "space-between"
       }
-    }, post.avatar || "👤"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        minWidth: 0,
-        cursor: "pointer"
-      },
-      onClick: () => openDetail(post)
     }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        marginBottom: 2,
-        flexWrap: "wrap"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 13,
         fontWeight: 700,
         color: C.navy
       }
-    }, post.name), /*#__PURE__*/React.createElement("span", {
+    }, "\uD83D\uDCF8 \uCD5C\uADFC \uC0AC\uC9C4"), /*#__PURE__*/React.createElement("span", {
       style: {
-        background: `${m.color}18`,
-        color: m.color,
-        borderRadius: 6,
-        padding: "1px 7px",
-        fontSize: 10,
-        fontWeight: 700
-      }
-    }, post.tag?.replace("#", "")), post.hidden && /*#__PURE__*/React.createElement("span", {
-      style: {
-        background: "#E53935",
-        color: "#fff",
-        borderRadius: 6,
-        padding: "1px 7px",
-        fontSize: 10,
-        fontWeight: 700
-      }
-    }, "\uD83D\uDE48 \uC228\uAE40"), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 10,
+        fontSize: 11,
         color: C.g400
       }
-    }, timeAgo(post.createdAt))), /*#__PURE__*/React.createElement("div", {
+    }, previewItems.length, "\uC7A5")), /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 12,
-        color: C.g600,
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 2,
+        padding: "0 0 2px"
+      }
+    }, previewItems.map((item, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      onClick: () => {
+        const photos = (item.post.mediaList || []).filter(x => !x.type?.startsWith("video"));
+        const idx = photos.findIndex(x => x.url === item.url);
+        setLightbox({
+          items: item.post.mediaList,
+          index: Math.max(0, idx)
+        });
+      },
+      style: {
+        aspectRatio: "1",
         overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
+        cursor: "pointer",
+        position: "relative",
+        animation: `fadeUp 0.3s ${i * 0.04}s ease forwards`,
+        opacity: 0
       }
-    }, post.desc || "내용 없음"))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6,
-        marginTop: 10
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => handleHidePost(post),
-      style: {
-        flex: 1,
-        padding: "7px",
-        borderRadius: 10,
-        border: "none",
-        background: post.hidden ? "#E8F5E9" : "#FFF3E0",
-        color: post.hidden ? "#2E7D32" : "#E65100",
-        fontWeight: 700,
-        fontSize: 11
-      }
-    }, post.hidden ? "👁️ 공개하기" : "🙈 숨기기"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => setEditModal(post),
-      style: {
-        flex: 1,
-        padding: "7px",
-        borderRadius: 10,
-        border: "none",
-        background: C.soft,
-        color: C.primary,
-        fontWeight: 700,
-        fontSize: 11
-      }
-    }, "\u270F\uFE0F \uC218\uC815"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => handleDelete(post),
-      style: {
-        flex: 1,
-        padding: "7px",
-        borderRadius: 10,
-        border: "none",
-        background: "#FFF5F5",
-        color: "#E53935",
-        fontWeight: 700,
-        fontSize: 11
-      }
-    }, "\uD83D\uDDD1\uFE0F \uC0AD\uC81C")));
-  }), posts.filter(p => p.userId !== "demo").length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "40px 0",
-      color: C.g400
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 36,
-      marginBottom: 8
-    }
-  }, "\uD83D\uDCED"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13
-    }
-  }, "\uAC8C\uC2DC\uBB3C\uC774 \uC5C6\uC5B4\uC694"))), adminSubTab === "accounts" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 700,
-      color: C.navy,
-      marginBottom: 10
-    }
-  }, "\uC804\uCCB4 \uAC00\uC785 \uACC4\uC815"), adminUsersLoading ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "32px 0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "inline-block",
-      width: 24,
-      height: 24,
-      border: `3px solid ${C.g200}`,
-      borderTopColor: C.primary,
-      borderRadius: "50%",
-      animation: "spin 0.8s linear infinite"
-    }
-  })) : adminUsers.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "32px 0",
-      color: C.g400
-    }
-  }, "\uACC4\uC815 \uC5C6\uC74C") : adminUsers.map((u, i) => {
-    const userPostCount = posts.filter(p => p.userId === u.id).length;
-    return /*#__PURE__*/React.createElement("div", {
-      key: u.id,
-      style: {
-        background: "#fff",
-        borderRadius: 14,
-        padding: "12px",
-        marginBottom: 8,
-        boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-        display: "flex",
-        gap: 12,
-        alignItems: "center",
-        animation: `fadeUp 0.3s ${Math.min(i, 6) * 0.04}s ease forwards`
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 44,
-        height: 44,
-        borderRadius: 13,
-        background: `${C.primary}18`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 24,
-        overflow: "hidden",
-        flexShrink: 0
-      }
-    }, u.pic ? /*#__PURE__*/React.createElement("img", {
-      src: u.pic,
+    }, /*#__PURE__*/React.createElement("img", {
+      src: item.url,
       style: {
         width: "100%",
         height: "100%",
         objectFit: "cover"
       },
       alt: ""
-    }) : u.avatar), /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("div", {
       style: {
-        flex: 1,
-        minWidth: 0
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: "linear-gradient(transparent,rgba(0,0,0,0.5))",
+        padding: "10px 4px 4px"
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 14,
+        fontSize: 8,
+        color: "#fff",
         fontWeight: 700,
-        color: C.navy
+        background: `${(JOB_META[item.post.tag] || {
+          color: C.primary
+        }).color}bb`,
+        borderRadius: 4,
+        padding: "1px 4px"
       }
-    }, u.name), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        color: C.g400,
-        marginTop: 1
-      }
-    }, u.school || "학교 미입력"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: C.g400,
-        marginTop: 2
-      }
-    }, "\uAC8C\uC2DC\uBB3C ", userPostCount, "\uAC1C \xB7 ID: ", u.id?.slice(0, 10), "...")), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => {
-        const userPosts = posts.filter(p => p.userId === u.id);
-        if (userPosts.length > 0) openDetail(userPosts[0]);else toast("이 계정의 게시물이 없어요");
-      },
-      style: {
-        padding: "6px 12px",
-        borderRadius: 10,
-        border: `1.5px solid ${C.g200}`,
-        background: "#fff",
-        color: C.g600,
-        fontSize: 11,
-        fontWeight: 700,
-        flexShrink: 0
-      }
-    }, "\uAC8C\uC2DC\uBB3C \uBCF4\uAE30"));
-  })), /*#__PURE__*/React.createElement("div", {
+    }, item.post.tag?.replace("#", ""))))))) : null;
+  })(), userType === "student" && /*#__PURE__*/React.createElement("div", {
     style: {
-      marginTop: 8
+      marginBottom: 9
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "card",
-    onClick: () => {
-      if (!showSettings && currentUser) {
-        setStName(currentUser.name || "");
-        setStSchool(currentUser.school || "");
-        setStAvatar(currentUser.avatar || "👩");
-        setStPic(currentUser.pic || null);
-      }
-      setShowSettings(p => !p);
-    },
+    onClick: () => setShowResume(p => !p),
     style: {
       background: C.white,
       borderRadius: 14,
       padding: "14px",
-      marginBottom: showSettings ? 0 : 9,
+      marginBottom: showResume ? 0 : 0,
       boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
       display: "flex",
       alignItems: "center",
       gap: 12,
       cursor: "pointer",
-      borderBottomLeftRadius: showSettings ? 0 : 14,
-      borderBottomRightRadius: showSettings ? 0 : 14
+      borderBottomLeftRadius: showResume ? 0 : 14,
+      borderBottomRightRadius: showResume ? 0 : 14
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 20
     }
-  }, "\u2699\uFE0F"), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDCDD"), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1
     }
@@ -4239,202 +3544,80 @@ function App() {
       fontWeight: 700,
       color: C.navy
     }
-  }, "\uB0B4 \uC124\uC815"), /*#__PURE__*/React.createElement("div", {
+  }, "\uC790\uAE30\uC18C\uAC1C\uC11C \uC791\uC131\uD558\uAE30"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: C.g400
     }
-  }, "\uC774\uB984, \uD559\uAD50, \uC0AC\uC9C4 \uC218\uC815")), /*#__PURE__*/React.createElement("span", {
+  }, resumeText ? "작성 완료 ✓" : "나를 소개하는 글을 써보세요")), /*#__PURE__*/React.createElement("span", {
     style: {
       color: C.g400,
       fontSize: 16,
       transition: "transform .2s",
-      transform: showSettings ? "rotate(90deg)" : "none"
+      transform: showResume ? "rotate(90deg)" : "none"
     }
-  }, "\u203A")), showSettings && /*#__PURE__*/React.createElement("div", {
+  }, "\u203A")), showResume && /*#__PURE__*/React.createElement("div", {
     style: {
       background: C.g100,
-      borderRadius: "0 0 16px 16px",
-      padding: "16px 14px 18px",
-      marginBottom: 9
+      borderRadius: "0 0 14px 14px",
+      padding: "14px",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 14,
-      marginBottom: 14
+      fontSize: 12,
+      color: C.g600,
+      marginBottom: 10,
+      lineHeight: 1.6
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, "\uB098\uB97C \uC18C\uAC1C\uD558\uB294 \uAE00\uC744 \uC790\uC720\uB86D\uAC8C \uC791\uC131\uD574\uBCF4\uC138\uC694 \u2728", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
     style: {
-      position: "relative",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 60,
-      height: 60,
-      borderRadius: 18,
-      background: `${C.primary}22`,
-      border: `2px solid ${C.primary}44`,
-      overflow: "hidden",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 32
-    }
-  }, stPic ? /*#__PURE__*/React.createElement("img", {
-    src: stPic,
-    style: {
-      width: "100%",
-      height: "100%",
-      objectFit: "cover"
-    },
-    alt: ""
-  }) : stAvatar), /*#__PURE__*/React.createElement("input", {
-    ref: settingsPicRef,
-    type: "file",
-    accept: "image/*",
-    style: {
-      display: "none"
-    },
-    onChange: e => pickSingleFile(e, url => setStPic(url))
-  }), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => settingsPicRef.current.click(),
-    style: {
-      position: "absolute",
-      bottom: -4,
-      right: -4,
-      width: 22,
-      height: 22,
-      borderRadius: 7,
-      background: C.primary,
-      border: "2.5px solid white",
-      fontSize: 10,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, "\uD83D\uDCF7")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
       color: C.g400,
-      marginBottom: 6
+      fontSize: 11
     }
-  }, "\uC544\uC774\uCF58 \uC120\uD0DD"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 5,
-      flexWrap: "wrap"
-    }
-  }, AVATARS.map(a => /*#__PURE__*/React.createElement("button", {
-    key: a,
-    className: "btn",
-    onClick: () => {
-      setStAvatar(a);
-      setStPic(null);
-    },
-    style: {
-      width: 30,
-      height: 30,
-      borderRadius: 9,
-      border: `2px solid ${stAvatar === a && !stPic ? C.primary : C.g200}`,
-      background: stAvatar === a && !stPic ? C.soft : C.white,
-      fontSize: 16
-    }
-  }, a))))), /*#__PURE__*/React.createElement("input", {
-    value: stName,
-    onChange: e => setStName(e.target.value),
-    placeholder: "\uC774\uB984",
-    style: {
-      width: "100%",
-      border: `1.5px solid ${stName ? C.primary : C.g200}`,
-      borderRadius: 12,
-      padding: "10px 13px",
-      fontSize: 14,
-      color: C.navy,
-      outline: "none",
-      marginBottom: 8,
-      background: C.white
-    }
-  }), /*#__PURE__*/React.createElement("input", {
-    value: stSchool,
-    onChange: e => setStSchool(e.target.value),
-    placeholder: "\uD559\uAD50 \uBC0F \uD559\uB144",
+  }, "\uC608) \uC774\uB984, \uC798\uD558\uB294 \uAC83, \uBC30\uC6B0\uACE0 \uC2F6\uC740 \uAC83, \uAFC8")), /*#__PURE__*/React.createElement("textarea", {
+    value: resumeText,
+    onChange: e => setResumeText(e.target.value),
+    placeholder: "예) 안녕하세요! 저는 홀트학교 전공과에 다니고 있어요.\n누룽지 만들기를 배우면서 식품 제조의 재미를 알게 됐어요.\n꼼꼼하게 포장하는 걸 잘하고, 앞으로도 열심히 하고 싶어요! 😊",
+    rows: 7,
     style: {
       width: "100%",
       border: `1.5px solid ${C.g200}`,
       borderRadius: 12,
-      padding: "10px 13px",
+      padding: "12px 13px",
       fontSize: 14,
       color: C.navy,
+      resize: "none",
       outline: "none",
-      marginBottom: 14,
-      background: C.white
+      background: C.white,
+      lineHeight: 1.7
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      gap: 8
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 8
     }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: saveSettings,
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
-      flex: 1,
-      padding: "11px",
+      fontSize: 11,
+      color: C.g400
+    }
+  }, resumeText.length, "\uC790"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: saveResume,
+    disabled: resumeSaving,
+    style: {
+      padding: "9px 20px",
       borderRadius: 12,
       border: "none",
-      background: C.primary,
-      color: "#fff",
-      fontWeight: 700,
-      fontSize: 14
+      background: resumeSaving ? C.g200 : C.primary,
+      color: resumeSaving ? C.g400 : "#fff",
+      fontSize: 13,
+      fontWeight: 700
     }
-  }, "\uC800\uC7A5\uD558\uAE30"), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => setShowSettings(false),
-    style: {
-      flex: 1,
-      padding: "11px",
-      borderRadius: 12,
-      border: `1px solid ${C.g200}`,
-      background: C.white,
-      color: C.g600,
-      fontWeight: 700,
-      fontSize: 14
-    }
-  }, "\uCDE8\uC18C")))), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => {
-      setCurrentUser(null);
-      LS.set("dc_current_user", null);
-      setScreen("login");
-      setLoginTab("new");
-      setFormName("");
-      setFormSchool("");
-      setFormPic(null);
-    },
-    style: {
-      width: "100%",
-      padding: "13px",
-      borderRadius: 14,
-      border: `1px solid ${C.g200}`,
-      background: C.white,
-      color: C.g600,
-      fontSize: 14,
-      fontWeight: 600,
-      marginBottom: 20
-    }
-  }, "\uB85C\uADF8\uC544\uC6C3")), !isAdmin && /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "14px 14px 0"
-    }
-  }, userType === "company" ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, resumeSaving ? "저장 중..." : "💾 저장하기")))), userType === "company" ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 15,
       fontWeight: 800,
@@ -4461,12 +3644,7 @@ function App() {
       color: C.navy,
       marginBottom: 4
     }
-  }, "\uC544\uC9C1 \uBCF4\uB0B8 \uB7EC\uBE0C\uCF5C\uC774 \uC5C6\uC5B4\uC694"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: C.g400
-    }
-  }, "\uD53C\uB4DC\uC5D0\uC11C \uB9C8\uC74C\uC5D0 \uB4DC\uB294 \uD559\uC0DD\uC5D0\uAC8C", /*#__PURE__*/React.createElement("br", null), "\uB7EC\uBE0C\uCF5C\uC744 \uBCF4\uB0B4\uBCF4\uC138\uC694!")) : sentLovecalls.map((lc, i) => {
+  }, "\uC544\uC9C1 \uBCF4\uB0B8 \uB7EC\uBE0C\uCF5C\uC774 \uC5C6\uC5B4\uC694")) : sentLovecalls.map((lc, i) => {
     const m = JOB_META[lc.tag] || {
       color: C.primary,
       emoji: "✨"
@@ -4549,138 +3727,7 @@ function App() {
         marginTop: 5
       }
     }, "\uD83D\uDC8C \uB7EC\uBE0C\uCF5C \uBC1C\uC1A1 \xB7 ", lc.time)));
-  })) : /*#__PURE__*/React.createElement("div", null, (() => {
-    const myPosts = posts.filter(p => p.userId === currentUser?.id);
-    const previewItems = myPosts.flatMap(p => (p.mediaList || []).filter(m => !m.type?.startsWith("video")).map(m => ({
-      ...m,
-      post: p
-    }))).slice(0, 6);
-    if (previewItems.length === 0 && myPosts.length === 0) return null;
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: C.white,
-        borderRadius: 16,
-        overflow: "hidden",
-        marginBottom: 9,
-        boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: "13px 14px 10px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 13,
-        fontWeight: 700,
-        color: C.navy
-      }
-    }, "\uD83D\uDCF8 \uCD5C\uADFC \uC0AC\uC9C4"), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11,
-        color: C.g400
-      }
-    }, previewItems.length, "\uC7A5")), previewItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: "18px 14px 18px",
-        textAlign: "center",
-        color: C.g400
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 28,
-        marginBottom: 6
-      }
-    }, "\uD83D\uDCF7"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12
-      }
-    }, "\uC544\uC9C1 \uC0AC\uC9C4\uC774 \uC5C6\uC5B4\uC694")) : /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gap: 2,
-        padding: "0 0 2px"
-      }
-    }, previewItems.map((item, i) => {
-      const m = JOB_META[item.post.tag] || {
-        color: C.primary,
-        emoji: "✨"
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        key: i,
-        onClick: () => {
-          const photos = (item.post.mediaList || []).filter(x => !x.type?.startsWith("video"));
-          const idx = photos.indexOf(item);
-          setLightbox({
-            items: item.post.mediaList,
-            index: Math.max(0, idx)
-          });
-        },
-        style: {
-          aspectRatio: "1",
-          overflow: "hidden",
-          cursor: "pointer",
-          position: "relative",
-          animation: `fadeUp 0.3s ${i * 0.04}s ease forwards`,
-          opacity: 0
-        }
-      }, /*#__PURE__*/React.createElement("img", {
-        src: item.url,
-        style: {
-          width: "100%",
-          height: "100%",
-          objectFit: "cover"
-        },
-        alt: ""
-      }), /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "linear-gradient(transparent,rgba(0,0,0,0.5))",
-          padding: "10px 4px 4px"
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 8,
-          color: "#fff",
-          fontWeight: 700,
-          background: `${m.color}bb`,
-          borderRadius: 4,
-          padding: "1px 4px"
-        }
-      }, item.post.tag?.replace("#", ""))));
-    }), myPosts.flatMap(p => (p.mediaList || []).filter(m => !m.type?.startsWith("video"))).length > 6 && /*#__PURE__*/React.createElement("div", {
-      onClick: () => {
-        setShowPortfolio(true);
-        setPortfolioView("grid");
-      },
-      style: {
-        aspectRatio: "1",
-        background: C.g100,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        gap: 4
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 20
-      }
-    }, "\u229E"), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 10,
-        color: C.g600,
-        fontWeight: 700
-      }
-    }, "\uC804\uCCB4\uBCF4\uAE30"))));
-  })(), /*#__PURE__*/React.createElement("div", {
+  })) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "card",
     onClick: () => setShowPortfolio(p => !p),
     style: {
@@ -4739,9 +3786,10 @@ function App() {
         padding: "10px 12px",
         gap: 8
       }
-    }, /*#__PURE__*/React.createElement("button", {
+    }, [["card", "☰ 게시물"], ["grid", "⊞ 사진"]].map(([val, lbl]) => /*#__PURE__*/React.createElement("button", {
+      key: val,
       className: "btn",
-      onClick: () => setPortfolioView("card"),
+      onClick: () => setPortfolioView(val),
       style: {
         flex: 1,
         display: "flex",
@@ -4751,39 +3799,13 @@ function App() {
         padding: "8px",
         borderRadius: 10,
         border: "none",
-        background: portfolioView === "card" ? C.primary : C.g100,
-        color: portfolioView === "card" ? "#fff" : C.g600,
-        fontWeight: portfolioView === "card" ? 700 : 400,
+        background: portfolioView === val ? C.primary : C.g100,
+        color: portfolioView === val ? "#fff" : C.g600,
+        fontWeight: portfolioView === val ? 700 : 400,
         fontSize: 12,
         transition: "all .18s"
       }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 14
-      }
-    }, "\u2630"), " \uAC8C\uC2DC\uBB3C \uBCF4\uAE30"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => setPortfolioView("grid"),
-      style: {
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-        padding: "8px",
-        borderRadius: 10,
-        border: "none",
-        background: portfolioView === "grid" ? C.primary : C.g100,
-        color: portfolioView === "grid" ? "#fff" : C.g600,
-        fontWeight: portfolioView === "grid" ? 700 : 400,
-        fontSize: 12,
-        transition: "all .18s"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 14
-      }
-    }, "\u229E"), " \uC0AC\uC9C4 \uBAA8\uC544\uBCF4\uAE30")), myPosts.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    }, lbl))), myPosts.length === 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "center",
         padding: "28px 0",
@@ -4799,10 +3821,7 @@ function App() {
         fontSize: 13,
         fontWeight: 600
       }
-    }, "\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uD55C \uAC8C\uC2DC\uBB3C\uC774 \uC5C6\uC5B4\uC694")) : portfolioView === "card" ?
-    /*#__PURE__*/
-    /* ── 카드 뷰 ── */
-    React.createElement("div", {
+    }, "\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uD55C \uAC8C\uC2DC\uBB3C\uC774 \uC5C6\uC5B4\uC694")) : portfolioView === "card" ? /*#__PURE__*/React.createElement("div", {
       style: {
         padding: "10px 10px 12px"
       }
@@ -4827,10 +3846,7 @@ function App() {
         items: post.mediaList || [],
         index: idx
       })
-    })))) :
-    /*#__PURE__*/
-    /* ── 그리드 뷰 (인스타 스타일) ── */
-    React.createElement("div", {
+    })))) : /*#__PURE__*/React.createElement("div", {
       style: {
         padding: "2px"
       }
@@ -4845,13 +3861,11 @@ function App() {
         color: C.primary,
         emoji: "✨"
       };
-      const firstMedia = (post.mediaList || [])[0];
-      const photoCount = (post.mediaList || []).filter(it => !it.type?.startsWith("video")).length;
-      const hasVideo = (post.mediaList || []).some(it => it.type?.startsWith("video"));
+      const fm = (post.mediaList || [])[0];
       return /*#__PURE__*/React.createElement("div", {
         key: post.id,
         onClick: () => {
-          if (firstMedia && !firstMedia.type?.startsWith("video")) setLightbox({
+          if (fm && !fm.type?.startsWith("video")) setLightbox({
             items: post.mediaList,
             index: 0
           });else openDetail(post);
@@ -4865,8 +3879,8 @@ function App() {
           animation: `fadeUp 0.3s ${Math.min(i, 8) * 0.04}s ease forwards`,
           opacity: 0
         }
-      }, firstMedia ? firstMedia.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("video", {
-        src: firstMedia.url,
+      }, fm ? fm.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("video", {
+        src: fm.url,
         style: {
           width: "100%",
           height: "100%",
@@ -4882,7 +3896,7 @@ function App() {
           textShadow: "0 1px 3px rgba(0,0,0,0.8)"
         }
       }, "\u25B6")) : /*#__PURE__*/React.createElement("img", {
-        src: firstMedia.url,
+        src: fm.url,
         style: {
           width: "100%",
           height: "100%",
@@ -4899,56 +3913,25 @@ function App() {
           fontSize: 32,
           opacity: 0.35
         }
-      }, m.emoji), (post.mediaList || []).length > 1 && /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          top: 5,
-          right: 5,
-          background: "rgba(0,0,0,0.55)",
-          borderRadius: 6,
-          padding: "2px 5px",
-          display: "flex",
-          alignItems: "center",
-          gap: 2
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 9,
-          color: "#fff"
-        }
-      }, "\u25E7"), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 9,
-          color: "#fff",
-          fontWeight: 700
-        }
-      }, (post.mediaList || []).length)), /*#__PURE__*/React.createElement("div", {
+      }, m.emoji), /*#__PURE__*/React.createElement("div", {
         style: {
           position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
           background: "linear-gradient(transparent,rgba(0,0,0,0.62))",
-          padding: "14px 5px 5px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between"
+          padding: "14px 5px 5px"
         }
       }, /*#__PURE__*/React.createElement("span", {
         style: {
-          fontSize: 9,
+          fontSize: 8,
           color: "#fff",
           fontWeight: 700,
           background: `${m.color}cc`,
-          borderRadius: 5,
+          borderRadius: 4,
           padding: "2px 5px"
         }
-      }, post.tag?.replace("#", "")), (post.likes || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 9,
-          color: "#fff"
-        }
-      }, "\uD83D\uDC9B ", post.likes)));
+      }, post.tag?.replace("#", ""))));
     }))));
   })()), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "card",
@@ -5180,15 +4163,7 @@ function App() {
       marginTop: 4
     }
   }, "\uB85C\uADF8\uC544\uC6C3")))), /*#__PURE__*/React.createElement("div", {
-    className: "tab-bar",
-    style: {
-      flexShrink: 0,
-      background: "rgba(250,250,248,0.96)",
-      backdropFilter: "blur(14px)",
-      borderTop: `1px solid ${C.g200}`,
-      display: "flex",
-      paddingTop: 7
-    }
+    className: "tab-bar"
   }, tabs.map(tab => /*#__PURE__*/React.createElement("button", {
     key: tab.id,
     className: "btn",
@@ -5235,12 +4210,7 @@ function App() {
     post: commentModal,
     currentUser: currentUser,
     onClose: () => setCommentModal(null),
-    onSubmit: handleCommentSubmit,
-    onCommentLike: handleCommentLike,
-    commentLiked: commentLiked,
-    onCommentDelete: handleCommentDelete,
-    onCommentEdit: handleCommentEdit,
-    isAdmin: isAdmin
+    onSubmit: handleCommentSubmit
   }), manageModal && /*#__PURE__*/React.createElement(ManageModal, {
     post: manageModal,
     onClose: () => setManageModal(null),
@@ -5248,9 +4218,7 @@ function App() {
       setEditModal(p);
       setManageModal(null);
     },
-    onDelete: handleDelete,
-    onHide: handleHidePost,
-    isAdmin: isAdmin
+    onDelete: handleDelete
   }), editModal && /*#__PURE__*/React.createElement(EditModal, {
     post: editModal,
     onClose: () => setEditModal(null),
@@ -5261,15 +4229,11 @@ function App() {
     onClose: () => setLightbox(null)
   }));
 }
-
-/* ── 관리 모달 ── */
 function ManageModal({
   post,
   onClose,
   onEdit,
-  onDelete,
-  onHide,
-  isAdmin
+  onDelete
 }) {
   const [confirm, setConfirm] = useState(false);
   const m = JOB_META[post.tag] || {
@@ -5361,26 +4325,7 @@ function ManageModal({
       justifyContent: "center",
       gap: 8
     }
-  }, "\u270F\uFE0F \uAC8C\uC2DC\uBB3C \uC218\uC815\uD558\uAE30"), isAdmin && onHide && /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => {
-      onHide(post);
-      onClose();
-    },
-    style: {
-      padding: "15px",
-      borderRadius: 16,
-      border: `1.5px solid ${post.hidden ? "#4CAF50" : "#FF9800"}`,
-      background: post.hidden ? "#F1F8E9" : "#FFF8E1",
-      color: post.hidden ? "#2E7D32" : "#E65100",
-      fontSize: 15,
-      fontWeight: 700,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8
-    }
-  }, post.hidden ? "👁️ 게시물 공개하기" : "🙈 게시물 숨기기"), /*#__PURE__*/React.createElement("button", {
+  }, "\u270F\uFE0F \uAC8C\uC2DC\uBB3C \uC218\uC815\uD558\uAE30"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => setConfirm(true),
     style: {
@@ -5451,15 +4396,13 @@ function ManageModal({
     }
   }, "\uC0AD\uC81C")))));
 }
-
-/* ── 수정 모달 ── */
 function EditModal({
   post,
   onClose,
   onSave
 }) {
   const [editDesc, setEditDesc] = useState(post.desc || "");
-  const [editTag, setEditTag] = useState(post.tag || "#바리스타");
+  const [editTag, setEditTag] = useState(post.tag || "#누룽지생산");
   const [editScore, setEditScore] = useState(post.progress || 50);
   const [editMedia, setEditMedia] = useState(post.mediaList || []);
   const tagColor = JOB_META[editTag]?.color || C.primary;
@@ -5525,7 +4468,7 @@ function EditModal({
       color: C.g600,
       marginBottom: 9
     }
-  }, "\uD83D\uDCF7 \uC0AC\uC9C4 / \uC601\uC0C1 (", editMedia.length, "\uAC1C)"), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDCF7 \uC0AC\uC9C4/\uC601\uC0C1 (", editMedia.length, "\uAC1C)"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: "repeat(3,1fr)",
@@ -5574,25 +4517,7 @@ function EditModal({
       padding: 0,
       cursor: "pointer"
     }
-  }, "\u2715"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      bottom: 3,
-      left: 3,
-      fontSize: 8,
-      background: "rgba(0,0,0,0.5)",
-      color: "#fff",
-      borderRadius: 4,
-      padding: "1px 4px"
-    }
-  }, item.type?.startsWith("video") ? "영상" : "사진")))), editMedia.length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      fontSize: 11,
-      color: C.g400,
-      paddingTop: 4
-    }
-  }, "\uBAA8\uB4E0 \uBBF8\uB514\uC5B4\uAC00 \uC0AD\uC81C\uB410\uC5B4\uC694")), /*#__PURE__*/React.createElement("div", {
+  }, "\u2715"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: C.g100,
       borderRadius: 16,
@@ -5706,8 +4631,6 @@ function EditModal({
     }
   }, "\u2705 \uC218\uC815 \uC644\uB8CC")));
 }
-
-/* ── 러브콜 모달 ── */
 function LoveModal({
   post,
   onClose,
@@ -5783,22 +4706,13 @@ function LoveModal({
     }
   }, "\uD83D\uDC8C \uB7EC\uBE0C\uCF5C \uBC1C\uC1A1\uD558\uAE30")));
 }
-
-/* ── 댓글 모달 ── */
 function CommentModal({
   post,
   currentUser,
   onClose,
-  onSubmit,
-  onCommentLike,
-  commentLiked,
-  onCommentDelete,
-  onCommentEdit,
-  isAdmin
+  onSubmit
 }) {
   const [text, setText] = useState("");
-  const [editingIdx, setEditingIdx] = useState(null);
-  const [editText, setEditText] = useState("");
   const m = JOB_META[post.tag] || {
     color: "#FF6B35"
   };
@@ -5809,17 +4723,11 @@ function CommentModal({
       author: currentUser?.name || "익명",
       avatar: currentUser?.avatar || "👤",
       pic: currentUser?.pic || null,
-      userId: currentUser?.id || null,
       text: text.trim(),
       time: "방금 전",
       createdAt: Date.now()
     });
     setText("");
-  };
-  const handleEditSave = idx => {
-    if (!editText.trim()) return;
-    onCommentEdit && onCommentEdit(post.id, idx, editText.trim());
-    setEditingIdx(null);
   };
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5900,193 +4808,67 @@ function CommentModal({
       fontSize: 13,
       fontWeight: 600
     }
-  }, "\uCCAB \uBC88\uC9F8 \uB313\uAE00\uC744 \uB0A8\uACA8\uBCF4\uC138\uC694!")), comments.map((c, i) => {
-    const likeKey = `${post.id}_${i}`;
-    const isLiked = !!(commentLiked && commentLiked[likeKey]);
-    const likeCount = c.likes || 0;
-    const canModify = c.userId && c.userId === currentUser?.id || isAdmin;
-    const isEditing = editingIdx === i;
-    return /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        display: "flex",
-        gap: 10,
-        alignItems: "flex-start",
-        animation: `fadeUp 0.3s ${i * 0.04}s ease forwards`,
-        opacity: 0
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 34,
-        height: 34,
-        borderRadius: 11,
-        background: `${m.color}18`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 19,
-        flexShrink: 0,
-        overflow: "hidden"
-      }
-    }, c.pic ? /*#__PURE__*/React.createElement("img", {
-      src: c.pic,
-      style: {
-        width: "100%",
-        height: "100%",
-        objectFit: "cover"
-      },
-      alt: ""
-    }) : c.avatar || "👤"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        background: C.g100,
-        borderRadius: "4px 14px 14px 14px",
-        padding: "9px 12px"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        justifyContent: "space-between",
-        marginBottom: 3,
-        alignItems: "center",
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 12,
-        fontWeight: 700,
-        color: C.navy
-      }
-    }, c.author), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 3,
-        alignItems: "center",
-        flexShrink: 0
-      }
-    }, c.edited && /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 9,
-        color: C.g400
-      }
-    }, "(\uC218\uC815\uB428)"), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 10,
-        color: C.g400
-      }
-    }, c.createdAt ? timeAgo(c.createdAt) : c.time), canModify && !isEditing && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => {
-        setEditingIdx(i);
-        setEditText(c.text);
-      },
-      style: {
-        background: "none",
-        border: "none",
-        fontSize: 12,
-        color: C.g400,
-        padding: "0 1px",
-        cursor: "pointer",
-        lineHeight: 1
-      }
-    }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => onCommentDelete && onCommentDelete(post.id, i),
-      style: {
-        background: "none",
-        border: "none",
-        fontSize: 12,
-        color: "#E53935",
-        padding: "0 1px",
-        cursor: "pointer",
-        lineHeight: 1
-      }
-    }, "\uD83D\uDDD1\uFE0F")))), isEditing ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("textarea", {
-      value: editText,
-      onChange: e => setEditText(e.target.value),
-      rows: 2,
-      style: {
-        width: "100%",
-        border: `1.5px solid ${C.primary}`,
-        borderRadius: 8,
-        padding: "6px 9px",
-        fontSize: 13,
-        color: C.navy,
-        resize: "none",
-        outline: "none",
-        background: "#fff",
-        lineHeight: 1.5
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6,
-        marginTop: 6
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => handleEditSave(i),
-      style: {
-        flex: 1,
-        padding: "6px",
-        borderRadius: 8,
-        border: "none",
-        background: C.primary,
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: 700
-      }
-    }, "\uC800\uC7A5"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => setEditingIdx(null),
-      style: {
-        flex: 1,
-        padding: "6px",
-        borderRadius: 8,
-        border: `1px solid ${C.g200}`,
-        background: "#fff",
-        color: C.g600,
-        fontSize: 12
-      }
-    }, "\uCDE8\uC18C"))) : /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 13,
-        color: C.g600,
-        lineHeight: 1.55
-      }
-    }, c.text), !isEditing && /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        justifyContent: "flex-end",
-        marginTop: 7
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => onCommentLike && onCommentLike(post, i),
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 4,
-        background: isLiked ? "#FFF0F0" : C.white,
-        border: `1.5px solid ${isLiked ? "#FF6B6B" : C.g200}`,
-        borderRadius: 20,
-        padding: "3px 10px",
-        fontSize: 12,
-        color: isLiked ? "#E53935" : C.g400,
-        fontWeight: isLiked ? 700 : 400,
-        transition: "all .18s",
-        cursor: "pointer"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 13
-      }
-    }, isLiked ? "❤️" : "🤍"), likeCount > 0 && /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11
-      }
-    }, likeCount)))));
-  })), /*#__PURE__*/React.createElement("div", {
+  }, "\uCCAB \uBC88\uC9F8 \uB313\uAE00\uC744 \uB0A8\uACA8\uBCF4\uC138\uC694!")), comments.map((c, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      gap: 10,
+      alignItems: "flex-start",
+      animation: `fadeUp 0.3s ${i * 0.04}s ease forwards`,
+      opacity: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 34,
+      height: 34,
+      borderRadius: 11,
+      background: `${m.color}18`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 19,
+      flexShrink: 0,
+      overflow: "hidden"
+    }
+  }, c.pic ? /*#__PURE__*/React.createElement("img", {
+    src: c.pic,
+    style: {
+      width: "100%",
+      height: "100%",
+      objectFit: "cover"
+    },
+    alt: ""
+  }) : c.avatar || "👤"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      background: C.g100,
+      borderRadius: "4px 14px 14px 14px",
+      padding: "9px 12px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: 3
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, c.author), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: C.g400
+    }
+  }, c.createdAt ? timeAgo(c.createdAt) : c.time)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.g600,
+      lineHeight: 1.55
+    }
+  }, c.text))))), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "12px 14px 28px",
       borderTop: `1px solid ${C.g200}`,
