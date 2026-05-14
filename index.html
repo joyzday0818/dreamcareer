@@ -10,11 +10,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:#1a1a1a;overscroll-behavior:none;overflow:hidden}
-    #root{position:fixed;inset:0;overflow:hidden}
+    html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden}
+    #root{height:100%;overflow:hidden}
     ::-webkit-scrollbar{display:none}
     input,textarea,button{font-family:'Noto Sans KR',sans-serif}
-    .app-shell{position:fixed!important;inset:0;display:flex;flex-direction:column;max-width:520px;width:100%;left:50%;transform:translateX(-50%);background:#FAFAF8}
+    .app-shell{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;max-width:520px;margin:0 auto;background:#FAFAF8}
     .app-scroll{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
     .tab-bar{flex-shrink:0;background:rgba(250,250,248,0.96);backdrop-filter:blur(14px);border-top:1px solid #E8E8E4;display:flex;padding-top:7px;padding-bottom:max(16px,env(safe-area-inset-bottom,16px))}
     @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
@@ -948,10 +948,7 @@ function App() {
     if (cached.length === 0) setSavedUsersLoading(true);
     FB.get("users").then(data => {
       if (data) {
-        const users = Object.values(data).map(({
-          pic,
-          ...r
-        }) => r);
+        const users = Object.values(data);
         setSavedUsers(users);
         LS.set("dc_users_cache", users);
       }
