@@ -83,7 +83,7 @@ const C = {
   soft:"#FFF1EC", g100:"#F5F5F3", g200:"#E8E8E4", g400:"#9A9A94", g600:"#5A5A54",
 };
 
-const JOB_TAGS = ["#바리스타","#티마스터","#스피치","#누룽지생산","#뻥과자생산","#휠마스터","#운동화 세탁","#원예재배","#청소","#삼오전자","#예술"];
+const JOB_TAGS = ["#바리스타","#티마스터","#스피치","#누룽지생산","#뻥과자생산","#휠마스터","#운동화 세탁","#원예재배","#청소","#산업체","#예술"];
 const JOB_META = {
   "#바리스타":    {color:"#8B4513",emoji:"☕"},
   "#티마스터":    {color:"#00695C",emoji:"🫖"},
@@ -94,7 +94,7 @@ const JOB_META = {
   "#운동화 세탁": {color:"#4527A0",emoji:"👟"},
   "#원예재배":    {color:"#2E7D32",emoji:"🌱"},
   "#청소":        {color:"#0277BD",emoji:"🧹"},
-  "#삼오전자":    {color:"#37474F",emoji:"🔌"},
+  "#산업체":      {color:"#37474F",emoji:"🏭"},
   "#예술":        {color:"#AD1457",emoji:"🎨"},
 };
 const AVATARS = ["👩","👦","👧","🧑","👨","👩‍🦱","👦🏽","👧🏻","🧑🏾","👨🏼"];
@@ -470,8 +470,8 @@ function App() {
     });
   }, [currentUser, userType]);
 
-  // 관리자 체크 (hooks 이전에 선언 필요)
-  const isAdmin = ["전예원"].includes(currentUser?.name) && userType==="student";
+  // 관리자 체크 - 이름에 "전예원" 포함하면 관리자 (공백 무관)
+  const isAdmin = !!(currentUser?.name?.trim().includes("전예원") && userType==="student");
 
   // 관리자 계정 목록 로드 (조건부 반환 이전에 선언해야 함)
   useEffect(()=>{
@@ -578,6 +578,25 @@ function App() {
     }
   };
 
+  /* ── 계정 탈퇴 ── */
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
+  const handleDeleteAccount = async () => {
+    if(!currentUser?.id) return;
+    // Firebase에서 유저 삭제
+    await FB.remove(`users/${currentUser.id}`);
+    // 해당 유저의 게시물 삭제
+    const myPosts = posts.filter(p=>p.userId===currentUser.id);
+    await Promise.all(myPosts.map(p=>FB.remove(`posts/${p.id}`)));
+    // 알림 데이터 삭제
+    await FB.remove(`notifications/${currentUser.id}`);
+    await FB.remove(`lovecalls/${currentUser.id}`);
+    // 로컬 초기화
+    setCurrentUser(null);
+    LS.set("dc_current_user",null);
+    setScreen("login");
+    setLoginTab("new");
+  };
+
   /* ── 설정 저장 ── */
   const saveSettings = async () => {
     const updated={...currentUser,name:stName,school:stSchool,avatar:stAvatar,pic:stPic};
@@ -600,12 +619,12 @@ function App() {
   };
 
   /* ── 게시물 수정 ── */
-  const handleEditSave = async (postId,newDesc,newTag,newProgress) => {
-    const updated={...posts.find(p=>p.id===postId),desc:newDesc,tag:newTag,progress:newProgress};
+  const handleEditSave = async (postId,newDesc,newTag,newProgress,newMediaList) => {
+    const updated={...posts.find(p=>p.id===postId),desc:newDesc,tag:newTag,progress:newProgress,mediaList:newMediaList};
     setPosts(prev=>prev.map(p=>p.id===postId?updated:p));
     if(detail?.id===postId) setDetail(updated);
     setEditModal(null);
-    await FB.update(`posts/${postId}`,{desc:newDesc,tag:newTag,progress:newProgress});
+    await FB.update(`posts/${postId}`,{desc:newDesc,tag:newTag,progress:newProgress,mediaList:newMediaList});
     toast("✅ 게시물이 수정됐어요!");
   };
 
@@ -1674,6 +1693,21 @@ function App() {
               )}
             </div>
             <button className="btn" onClick={()=>{setCurrentUser(null);LS.set("dc_current_user",null);setScreen("login");setLoginTab("new");setFormName("");setFormSchool("");setFormPic(null);}} style={{width:"100%",padding:"13px",borderRadius:14,border:`1px solid ${C.g200}`,background:C.white,color:C.g600,fontSize:14,fontWeight:600,marginTop:4}}>로그아웃</button>
+            {/* 계정 탈퇴 */}
+            {userType==="student"&&(
+              !deleteAccountConfirm?(
+                <button className="btn" onClick={()=>setDeleteAccountConfirm(true)} style={{width:"100%",padding:"11px",borderRadius:14,border:"1px solid #FFCDD2",background:"#FFF5F5",color:"#E53935",fontSize:13,fontWeight:600,marginTop:8}}>계정 탈퇴</button>
+              ):(
+                <div style={{background:"#FFF5F5",borderRadius:14,padding:"14px",marginTop:8,border:"1.5px solid #FFCDD2"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#C62828",marginBottom:4}}>⚠️ 정말 탈퇴할까요?</div>
+                  <div style={{fontSize:12,color:"#E53935",marginBottom:12}}>계정과 모든 게시물이 영구 삭제돼요.</div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button className="btn" onClick={()=>setDeleteAccountConfirm(false)} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.g200}`,background:C.white,color:C.g600,fontSize:13,fontWeight:700}}>취소</button>
+                    <button className="btn" onClick={handleDeleteAccount} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:"#E53935",color:"#fff",fontSize:13,fontWeight:900}}>탈퇴하기</button>
+                  </div>
+                </div>
+              )
+            )}
           </div>
           )}{/* end !isAdmin */}
         </div>
@@ -1749,9 +1783,10 @@ function ManageModal({post, onClose, onEdit, onDelete, onHide, isAdmin}) {
 
 /* ── 수정 모달 ── */
 function EditModal({post,onClose,onSave}) {
-  const [editDesc,setEditDesc] = useState(post.desc||"");
-  const [editTag,setEditTag]   = useState(post.tag||"#바리스타");
-  const [editScore,setEditScore] = useState(post.progress||50);
+  const [editDesc,setEditDesc]       = useState(post.desc||"");
+  const [editTag,setEditTag]         = useState(post.tag||"#바리스타");
+  const [editScore,setEditScore]     = useState(post.progress||50);
+  const [editMedia,setEditMedia]     = useState(post.mediaList||[]);
   const tagColor=JOB_META[editTag]?.color||C.primary;
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,overflowY:"auto",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:20}}>
@@ -1760,6 +1795,28 @@ function EditModal({post,onClose,onSave}) {
           <div style={{fontSize:17,fontWeight:900,color:C.navy}}>✏️ 게시물 수정</div>
           <button className="btn" onClick={onClose} style={{background:C.g100,border:"none",borderRadius:10,padding:"7px 12px",fontSize:13,color:C.g600,fontWeight:700}}>닫기</button>
         </div>
+        {/* 사진/영상 관리 */}
+        {editMedia.length>0&&(
+          <div style={{background:C.g100,borderRadius:16,padding:"13px 14px",marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.g600,marginBottom:9}}>📷 사진 / 영상 ({editMedia.length}개)</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+              {editMedia.map((item,i)=>(
+                <div key={i} style={{aspectRatio:"1",borderRadius:10,overflow:"hidden",position:"relative"}}>
+                  {item.type?.startsWith("video")
+                    ?<video src={item.url} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    :<img src={item.url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                  }
+                  <button className="btn" onClick={()=>setEditMedia(p=>p.filter((_,j)=>j!==i))}
+                    style={{position:"absolute",top:4,right:4,width:22,height:22,borderRadius:7,background:"rgba(0,0,0,0.65)",color:"#fff",border:"none",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",padding:0,cursor:"pointer"}}>✕</button>
+                  <div style={{position:"absolute",bottom:3,left:3,fontSize:8,background:"rgba(0,0,0,0.5)",color:"#fff",borderRadius:4,padding:"1px 4px"}}>
+                    {item.type?.startsWith("video")?"영상":"사진"}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {editMedia.length===0&&<div style={{textAlign:"center",fontSize:11,color:C.g400,paddingTop:4}}>모든 미디어가 삭제됐어요</div>}
+          </div>
+        )}
         <div style={{background:C.g100,borderRadius:16,padding:"13px 14px",marginBottom:12}}>
           <div style={{fontSize:12,fontWeight:700,color:C.g600,marginBottom:7}}>📝 내용</div>
           <textarea value={editDesc} onChange={e=>setEditDesc(e.target.value)} rows={5} style={{width:"100%",border:"none",outline:"none",fontSize:14,color:C.navy,resize:"none",background:"transparent",lineHeight:1.7}}/>
@@ -1779,7 +1836,7 @@ function EditModal({post,onClose,onSave}) {
           </div>
           <input type="range" min="0" max="100" step="5" value={editScore} onChange={e=>setEditScore(Number(e.target.value))} style={{width:"100%",accentColor:tagColor,cursor:"pointer"}}/>
         </div>
-        <button className="btn" onClick={()=>onSave(post.id,editDesc,editTag,editScore)} style={{width:"100%",padding:"16px",borderRadius:18,border:"none",background:`linear-gradient(135deg,${C.primary},${C.gold})`,color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 6px 18px rgba(255,107,53,0.35)"}}>✅ 수정 완료</button>
+        <button className="btn" onClick={()=>onSave(post.id,editDesc,editTag,editScore,editMedia)} style={{width:"100%",padding:"16px",borderRadius:18,border:"none",background:`linear-gradient(135deg,${C.primary},${C.gold})`,color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 6px 18px rgba(255,107,53,0.35)"}}>✅ 수정 완료</button>
       </div>
     </div>
   );
