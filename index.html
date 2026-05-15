@@ -33,7 +33,8 @@
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script>const {
+<script>
+const {
   useState,
   useEffect,
   useRef,
@@ -829,63 +830,13 @@ function App() {
   const [filterTag, setFilterTag] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPortfolio, setShowPortfolio] = useState(false);
-  const [portfolioView, setPortfolioView] = useState(null);
+  const [portfolioView, setPortfolioView] = useState("card");
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   // ✅ 변경1: 자기소개서 상태
   const [showResume, setShowResume] = useState(false);
   const [resumeText, setResumeText] = useState("");
-  const [resumeStrengths, setResumeStrengths] = useState([]);
-  const [resumeCertificate, setResumeCertificate] = useState("");
   const [resumeSaving, setResumeSaving] = useState(false);
-  const [detailResume, setDetailResume] = useState(null);
-  const [aiModal, setAiModal] = useState(null); // {mode, loading, result, error}
-
-  const callAI = async mode => {
-    setAiModal({
-      mode,
-      loading: true,
-      result: null,
-      error: null
-    });
-    const modeLabel = {
-      draft: "자기소개 초안 작성",
-      spell: "맞춤법 검사",
-      polish: "문장 다듬기"
-    }[mode];
-    const prompt = mode === "draft" ? `특수학교 학생의 자기소개서 초안을 써주세요.\n직무: ${tag.replace("#", "")}\n학교: ${currentUser?.school || "특수학교"}\n선택한 장점: ${resumeStrengths.join(", ") || "없음"}\n자격증: ${resumeCertificate || "없음"}\n\n조건: 3~5문장, 쉬운 한국어, 자연스럽고 따뜻한 말투, 1인칭으로 작성. 인삿말로 시작해서 직무 경험과 장점을 언급하고 열심히 하겠다는 다짐으로 마무리해주세요. 결과물만 출력하세요.` : mode === "spell" ? `아래 자기소개 글의 맞춤법을 검사하고 수정해주세요.\n\n원문:\n${resumeText}\n\n조건: 맞춤법과 띄어쓰기만 수정하고 내용은 바꾸지 마세요. 수정된 글만 출력하세요. 수정할 게 없으면 원문을 그대로 출력하세요.` : `아래 자기소개 글을 더 자연스럽고 매력적으로 다듬어주세요.\n\n원문:\n${resumeText}\n\n조건: 같은 내용을 유지하되 문장을 더 자연스럽게 만들어주세요. 특수학교 학생에게 어울리는 따뜻한 말투로. 결과물만 출력하세요.`;
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 400,
-          messages: [{
-            role: "user",
-            content: prompt
-          }]
-        })
-      });
-      const data = await res.json();
-      const text = data.content?.[0]?.text || "";
-      setAiModal({
-        mode,
-        loading: false,
-        result: text,
-        error: null
-      });
-    } catch (e) {
-      setAiModal({
-        mode,
-        loading: false,
-        result: null,
-        error: "AI 연결에 실패했어요. 다시 시도해주세요."
-      });
-    }
-  };
   const [stName, setStName] = useState("");
   const [stSchool, setStSchool] = useState("");
   const [stAvatar, setStAvatar] = useState("👩");
@@ -997,10 +948,7 @@ function App() {
     if (cached.length === 0) setSavedUsersLoading(true);
     FB.get("users").then(data => {
       if (data) {
-        const users = Object.values(data).map(({
-          pic,
-          ...r
-        }) => r);
+        const users = Object.values(data);
         setSavedUsers(users);
         LS.set("dc_users_cache", users);
       }
@@ -1023,30 +971,17 @@ function App() {
     });
   }, [currentUser, userType]);
 
-  // ✅ 자기소개서 로드 (내 정보)
+  // ✅ 변경1: 자기소개서 로드
   useEffect(() => {
     if (activeTab !== 'profile' || !currentUser?.id) return;
     FB.get(`resumes/${currentUser.id}`).then(data => {
-      if (data) {
-        if (data.text) setResumeText(data.text);
-        if (data.strengths) setResumeStrengths(data.strengths);
-        if (data.certificate) setResumeCertificate(data.certificate);
-      }
+      if (data?.text) setResumeText(data.text);
     });
   }, [activeTab, currentUser]);
-
-  // 학생 프로필 상세 - 자기소개서 로드
-  useEffect(() => {
-    if (!detail?.userId || detail.userId === 'demo') return;
-    setDetailResume(null);
-    FB.get(`resumes/${detail.userId}`).then(data => setDetailResume(data || {}));
-  }, [detail]);
   const saveResume = async () => {
     setResumeSaving(true);
     await FB.set(`resumes/${currentUser.id}`, {
       text: resumeText,
-      strengths: resumeStrengths,
-      certificate: resumeCertificate,
       updatedAt: Date.now()
     });
     setResumeSaving(false);
@@ -2059,68 +1994,7 @@ function App() {
       style: {
         padding: "12px 14px 120px"
       }
-    }, detailResume && (detailResume.text || detailResume.strengths?.length || detailResume.certificate) && /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: C.white,
-        borderRadius: 16,
-        padding: "14px",
-        marginBottom: 14,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        border: `1.5px solid ${C.primary}22`
-      }
     }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 13,
-        fontWeight: 700,
-        color: C.navy,
-        marginBottom: 10
-      }
-    }, "\uD83D\uDCDD \uC790\uAE30\uC18C\uAC1C\uC11C"), detailResume.text && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 13,
-        color: C.g600,
-        lineHeight: 1.7,
-        whiteSpace: "pre-wrap",
-        marginBottom: detailResume.strengths?.length ? 10 : 0
-      }
-    }, detailResume.text), detailResume.strengths?.length > 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        marginBottom: detailResume.certificate ? 10 : 0
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        fontWeight: 700,
-        color: C.g400,
-        marginBottom: 6
-      }
-    }, "\uB098\uC758 \uC7A5\uC810"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6,
-        flexWrap: "wrap"
-      }
-    }, detailResume.strengths.map((s, i) => /*#__PURE__*/React.createElement("span", {
-      key: i,
-      style: {
-        background: `${C.primary}12`,
-        color: C.primary,
-        borderRadius: 20,
-        padding: "4px 12px",
-        fontSize: 12,
-        fontWeight: 600
-      }
-    }, s)))), detailResume.certificate && /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        color: C.g600
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontWeight: 700,
-        color: C.navy
-      }
-    }, "\uC790\uACA9\uC99D: "), detailResume.certificate)), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 13,
         fontWeight: 700,
@@ -3169,13 +3043,7 @@ function App() {
       color: C.navy,
       marginBottom: 4
     }
-  }, "\uD83C\uDF1F \uC624\uB298 \uC0C8\uB85C \uBC30\uC6B4 \uC810\uACFC \uC140\uD504 \uCE6D\uCC2C"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: C.g400,
-      marginBottom: 10
-    }
-  }, "\uC798\uD55C \uC810, \uCC98\uC74C \uD574\uBCF8 \uAC83, \uC2A4\uC2A4\uB85C \uCE6D\uCC2C\uD558\uACE0 \uC2F6\uC740 \uAC83\uC744 \uC801\uC5B4\uBCF4\uC138\uC694 \uD83D\uDCAA"), /*#__PURE__*/React.createElement("textarea", {
+  }, "\uD83C\uDF1F \uB098\uC5D0\uAC8C \uD558\uB294 \uC140\uD504 \uCE6D\uCC2C \uD55C\uB9C8\uB514"), /*#__PURE__*/React.createElement("textarea", {
     placeholder: "예) 처음으로 혼자 카운터를 맡았어요! 실수 없이 해내서 정말 뿌듯해요 🎉",
     value: selfPraise,
     onChange: e => setSelfPraise(e.target.value),
@@ -3678,184 +3546,75 @@ function App() {
       fontSize: 12,
       color: C.g400
     }
-  }, resumeText || resumeStrengths.length || resumeCertificate ? "작성 완료 ✓" : "나를 소개하는 글을 써보세요")), /*#__PURE__*/React.createElement("span", {
+  }, resumeText ? "작성 완료 ✓" : "나를 소개하는 글을 써보세요")), /*#__PURE__*/React.createElement("span", {
     style: {
       color: C.g400,
       fontSize: 16,
       transition: "transform .2s",
       transform: showResume ? "rotate(90deg)" : "none"
     }
-  }, "\u203A")), showResume && (() => {
-    const STRENGTHS = ["성실해요", "친절해요", "일처리가 꼼꼼해요", "적극적이에요", "지각하지 않아요", "일을 빨리 배우는 편이에요", "체력이 좋아요", "손이 빨라요", "깔끔하고 청결해요", "책임감이 있어요", "약속을 잘 지켜요", "신체가 건강해요", "성격이 밝아요", "예의가 발라요", "긍정적이에요", "센스 있어요"];
-    const toggleStrength = s => setResumeStrengths(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: C.g100,
-        borderRadius: "0 0 14px 14px",
-        padding: "14px"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        fontWeight: 700,
-        color: C.navy,
-        marginBottom: 6
-      }
-    }, "\u270F\uFE0F \uC790\uAE30\uC18C\uAC1C"), /*#__PURE__*/React.createElement("textarea", {
-      value: resumeText,
-      onChange: e => setResumeText(e.target.value),
-      placeholder: "예) 안녕하세요! 저는 홀트학교 전공과에 다니고 있어요.\n누룽지 만들기를 배우면서 식품 제조의 재미를 알게 됐어요. 😊",
-      rows: 4,
-      style: {
-        width: "100%",
-        border: `1.5px solid ${C.g200}`,
-        borderRadius: 12,
-        padding: "11px 13px",
-        fontSize: 13,
-        color: C.navy,
-        resize: "none",
-        outline: "none",
-        background: C.white,
-        lineHeight: 1.7,
-        marginBottom: 8
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6,
-        marginBottom: 12,
-        flexWrap: "wrap"
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => callAI("draft"),
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "7px 12px",
-        borderRadius: 20,
-        border: `1.5px solid ${C.gold}`,
-        background: `${C.gold}12`,
-        color: "#B8860B",
-        fontSize: 11,
-        fontWeight: 700
-      }
-    }, "\u2728 AI \uCD08\uC548 \uC791\uC131"), resumeText && /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => callAI("spell"),
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "7px 12px",
-        borderRadius: 20,
-        border: `1.5px solid ${C.accent}`,
-        background: `${C.accent}12`,
-        color: C.accent,
-        fontSize: 11,
-        fontWeight: 700
-      }
-    }, "\uD83D\uDD0D \uB9DE\uCDA4\uBC95 \uAC80\uC0AC"), resumeText && /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => callAI("polish"),
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "7px 12px",
-        borderRadius: 20,
-        border: `1.5px solid ${C.primary}`,
-        background: `${C.primary}12`,
-        color: C.primary,
-        fontSize: 11,
-        fontWeight: 700
-      }
-    }, "\u270F\uFE0F \uBB38\uC7A5 \uB2E4\uB4EC\uAE30")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        fontWeight: 700,
-        color: C.navy,
-        marginBottom: 4
-      }
-    }, "\uD83D\uDCAA \uB098\uC758 \uC7A5\uC810 ", /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontWeight: 400,
-        color: C.g400,
-        fontSize: 11
-      }
-    }, "(\uBCF5\uC218 \uC120\uD0DD \uAC00\uB2A5)")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 7,
-        flexWrap: "wrap",
-        marginBottom: 12
-      }
-    }, STRENGTHS.map(s => {
-      const sel = resumeStrengths.includes(s);
-      return /*#__PURE__*/React.createElement("button", {
-        key: s,
-        className: "btn",
-        onClick: () => toggleStrength(s),
-        style: {
-          padding: "7px 14px",
-          borderRadius: 22,
-          border: `1.5px solid ${sel ? C.primary : C.g200}`,
-          background: sel ? C.primary : C.white,
-          color: sel ? "#fff" : C.g600,
-          fontSize: 12,
-          fontWeight: sel ? 700 : 400,
-          transition: "all .15s"
-        }
-      }, s);
-    })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        fontWeight: 700,
-        color: C.navy,
-        marginBottom: 6
-      }
-    }, "\uD83C\uDFC6 \uC790\uACA9\uC99D"), /*#__PURE__*/React.createElement("input", {
-      value: resumeCertificate,
-      onChange: e => setResumeCertificate(e.target.value),
-      placeholder: "\uC608) \uCEF4\uD4E8\uD130\uD65C\uC6A9\uB2A5\uB825, \uC870\uB9AC\uAE30\uB2A5\uC0AC \uB4F1",
-      style: {
-        width: "100%",
-        border: `1.5px solid ${C.g200}`,
-        borderRadius: 12,
-        padding: "11px 13px",
-        fontSize: 13,
-        color: C.navy,
-        outline: "none",
-        background: C.white,
-        marginBottom: 12
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11,
-        color: C.g400
-      }
-    }, resumeStrengths.length, "\uAC1C \uC120\uD0DD\uB428"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: saveResume,
-      disabled: resumeSaving,
-      style: {
-        padding: "9px 20px",
-        borderRadius: 12,
-        border: "none",
-        background: resumeSaving ? C.g200 : C.primary,
-        color: resumeSaving ? C.g400 : "#fff",
-        fontSize: 13,
-        fontWeight: 700
-      }
-    }, resumeSaving ? "저장 중..." : "💾 저장하기")));
-  })()), userType === "company" ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "\u203A")), showResume && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.g100,
+      borderRadius: "0 0 14px 14px",
+      padding: "14px",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.g600,
+      marginBottom: 10,
+      lineHeight: 1.6
+    }
+  }, "\uB098\uB97C \uC18C\uAC1C\uD558\uB294 \uAE00\uC744 \uC790\uC720\uB86D\uAC8C \uC791\uC131\uD574\uBCF4\uC138\uC694 \u2728", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: C.g400,
+      fontSize: 11
+    }
+  }, "\uC608) \uC774\uB984, \uC798\uD558\uB294 \uAC83, \uBC30\uC6B0\uACE0 \uC2F6\uC740 \uAC83, \uAFC8")), /*#__PURE__*/React.createElement("textarea", {
+    value: resumeText,
+    onChange: e => setResumeText(e.target.value),
+    placeholder: "예) 안녕하세요! 저는 홀트학교 전공과에 다니고 있어요.\n누룽지 만들기를 배우면서 식품 제조의 재미를 알게 됐어요.\n꼼꼼하게 포장하는 걸 잘하고, 앞으로도 열심히 하고 싶어요! 😊",
+    rows: 7,
+    style: {
+      width: "100%",
+      border: `1.5px solid ${C.g200}`,
+      borderRadius: 12,
+      padding: "12px 13px",
+      fontSize: 14,
+      color: C.navy,
+      resize: "none",
+      outline: "none",
+      background: C.white,
+      lineHeight: 1.7
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: C.g400
+    }
+  }, resumeText.length, "\uC790"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: saveResume,
+    disabled: resumeSaving,
+    style: {
+      padding: "9px 20px",
+      borderRadius: 12,
+      border: "none",
+      background: resumeSaving ? C.g200 : C.primary,
+      color: resumeSaving ? C.g400 : "#fff",
+      fontSize: 13,
+      fontWeight: 700
+    }
+  }, resumeSaving ? "저장 중..." : "💾 저장하기")))), userType === "company" ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 15,
       fontWeight: 800,
@@ -4027,7 +3786,7 @@ function App() {
     }, [["card", "☰ 게시물"], ["grid", "⊞ 사진"]].map(([val, lbl]) => /*#__PURE__*/React.createElement("button", {
       key: val,
       className: "btn",
-      onClick: () => setPortfolioView(v => v === val ? null : val),
+      onClick: () => setPortfolioView(val),
       style: {
         flex: 1,
         display: "flex",
@@ -4043,14 +3802,7 @@ function App() {
         fontSize: 12,
         transition: "all .18s"
       }
-    }, lbl))), !portfolioView && /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: "center",
-        padding: "20px 0",
-        color: C.g400,
-        fontSize: 12
-      }
-    }, "\uC704\uC5D0\uC11C \uBCF4\uAE30 \uBC29\uC2DD\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694"), portfolioView && myPosts.length === 0 && /*#__PURE__*/React.createElement("div", {
+    }, lbl))), myPosts.length === 0 ? /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "center",
         padding: "28px 0",
@@ -4066,7 +3818,7 @@ function App() {
         fontSize: 13,
         fontWeight: 600
       }
-    }, "\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uD55C \uAC8C\uC2DC\uBB3C\uC774 \uC5C6\uC5B4\uC694")), portfolioView === "card" && myPosts.length > 0 && /*#__PURE__*/React.createElement("div", {
+    }, "\uC544\uC9C1 \uC5C5\uB85C\uB4DC\uD55C \uAC8C\uC2DC\uBB3C\uC774 \uC5C6\uC5B4\uC694")) : portfolioView === "card" ? /*#__PURE__*/React.createElement("div", {
       style: {
         padding: "10px 10px 12px"
       }
@@ -4091,7 +3843,7 @@ function App() {
         items: post.mediaList || [],
         index: idx
       })
-    })))), portfolioView === "grid" && myPosts.length > 0 && /*#__PURE__*/React.createElement("div", {
+    })))) : /*#__PURE__*/React.createElement("div", {
       style: {
         padding: "2px"
       }
@@ -4472,148 +4224,7 @@ function App() {
     items: lightbox.items,
     initialIndex: lightbox.index,
     onClose: () => setLightbox(null)
-  }), aiModal && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.5)",
-      zIndex: 300,
-      display: "flex",
-      alignItems: "flex-end",
-      justifyContent: "center"
-    },
-    onClick: () => !aiModal.loading && setAiModal(null)
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: C.white,
-      borderRadius: "24px 24px 0 0",
-      padding: "24px 18px 36px",
-      width: "100%",
-      maxWidth: 520,
-      animation: "slideUp 0.3s ease",
-      maxHeight: "80vh",
-      display: "flex",
-      flexDirection: "column"
-    },
-    onClick: e => e.stopPropagation()
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 22
-    }
-  }, aiModal.mode === "draft" ? "✨" : aiModal.mode === "spell" ? "🔍" : "✏️"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 15,
-      fontWeight: 700,
-      color: C.navy
-    }
-  }, aiModal.mode === "draft" ? "AI 자기소개 초안" : aiModal.mode === "spell" ? "맞춤법 검사 결과" : "문장 다듬기 결과"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: C.g400
-    }
-  }, "Claude AI\uAC00 \uB3C4\uC640\uB4DC\uB838\uC5B4\uC694")), !aiModal.loading && /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => setAiModal(null),
-    style: {
-      background: C.g100,
-      border: "none",
-      borderRadius: 10,
-      padding: "7px 12px",
-      fontSize: 13,
-      color: C.g600,
-      fontWeight: 700
-    }
-  }, "\uB2EB\uAE30")), aiModal.loading ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "32px 0"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "inline-block",
-      width: 32,
-      height: 32,
-      border: `3px solid ${C.g200}`,
-      borderTopColor: C.gold,
-      borderRadius: "50%",
-      animation: "spin 0.8s linear infinite",
-      marginBottom: 12
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 14,
-      color: C.g400
-    }
-  }, "AI\uAC00 \uC791\uC131 \uC911\uC774\uC5D0\uC694...")) : aiModal.error ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "24px 0",
-      color: "#E53935"
-    }
-  }, aiModal.error) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      overflowY: "auto",
-      background: C.g100,
-      borderRadius: 14,
-      padding: "14px",
-      marginBottom: 14
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 14,
-      color: C.navy,
-      lineHeight: 1.8,
-      whiteSpace: "pre-wrap"
-    }
-  }, aiModal.result)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => setAiModal(null),
-    style: {
-      flex: 1,
-      padding: "13px",
-      borderRadius: 14,
-      border: `1px solid ${C.g200}`,
-      background: C.white,
-      color: C.g600,
-      fontWeight: 600,
-      fontSize: 14
-    }
-  }, "\uB2EB\uAE30"), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => {
-      setResumeText(aiModal.result);
-      setAiModal(null);
-      toast("✅ 자기소개에 적용됐어요!");
-    },
-    style: {
-      flex: 2,
-      padding: "13px",
-      borderRadius: 14,
-      border: "none",
-      background: `linear-gradient(135deg,${C.primary},${C.gold})`,
-      color: "#fff",
-      fontWeight: 700,
-      fontSize: 14,
-      boxShadow: "0 4px 14px rgba(255,107,53,0.35)"
-    }
-  }, "\u2705 \uB0B4 \uC18C\uAC1C\uC5D0 \uC801\uC6A9\uD558\uAE30"))))));
+  }));
 }
 function ManageModal({
   post,
@@ -5338,6 +4949,7 @@ function CommentModal({
     }
   }, "\u27A4")))));
 }
-ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));</script>
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
+</script>
 </body>
 </html>
