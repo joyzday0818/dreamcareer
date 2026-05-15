@@ -1037,14 +1037,17 @@ function App() {
     });
   }, [currentUser, userType]);
 
-  // ✅ 자기소개서 로드 (내 정보)
+  // ✅ 자기소개서 로드 (내 정보) - 먼저 초기화 후 로드
   useEffect(() => {
     if (activeTab !== 'profile' || !currentUser?.id) return;
+    setResumeText("");
+    setResumeStrengths([]);
+    setResumeCertificate("");
     FB.get(`resumes/${currentUser.id}`).then(data => {
       if (data) {
-        if (data.text) setResumeText(data.text);
-        if (data.strengths) setResumeStrengths(data.strengths);
-        if (data.certificate) setResumeCertificate(data.certificate);
+        setResumeText(data.text || "");
+        setResumeStrengths(data.strengths || []);
+        setResumeCertificate(data.certificate || "");
       }
     });
   }, [activeTab, currentUser]);
@@ -1946,15 +1949,17 @@ function App() {
     return /*#__PURE__*/React.createElement("div", {
       style: {
         position: "fixed",
-        inset: 0,
+        top: 0,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: 520,
+        height: "100%",
         background: C.surface,
         overflowY: "auto",
-        overscrollBehavior: "contain",
-        maxWidth: 520,
-        left: "50%",
-        transform: "translateX(-50%)"
+        overscrollBehavior: "contain"
       }
-    }, /*#__PURE__*/React.createElement(Toast, {
+    }, "        ", /*#__PURE__*/React.createElement(Toast, {
       msg: toastMsg
     }), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -4414,6 +4419,9 @@ function App() {
       setFormName("");
       setFormSchool("");
       setFormPic(null);
+      setResumeText("");
+      setResumeStrengths([]);
+      setResumeCertificate("");
     },
     style: {
       width: "100%",
