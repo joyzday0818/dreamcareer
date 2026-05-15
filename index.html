@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+  <meta name="color-scheme" content="light"/>
   <meta name="theme-color" content="#FF6B35"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-title" content="드림 커리어"/>
   <title>드림 커리어</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:#FAFAF8;overscroll-behavior:none;overflow:hidden}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;color-scheme:light}
+    html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:#FAFAF8!important;overscroll-behavior:none;overflow:hidden;color-scheme:light}
     #root{height:100%;overflow:hidden}
     ::-webkit-scrollbar{display:none}
     input,textarea,button{font-family:'Noto Sans KR',sans-serif}
@@ -870,7 +871,7 @@ function App() {
           "anthropic-dangerous-direct-browser-access": "true"
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-haiku-4-5-20251001",
           max_tokens: 400,
           messages: [{
             role: "user",
@@ -1991,7 +1992,8 @@ function App() {
       color: m.color
     }), /*#__PURE__*/React.createElement("div", {
       style: {
-        flex: 1
+        flex: 1,
+        minWidth: 0
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2016,7 +2018,9 @@ function App() {
         borderRadius: 20,
         padding: "4px 14px",
         fontSize: 11,
-        fontWeight: 700
+        fontWeight: 700,
+        whiteSpace: "nowrap",
+        display: "inline-block"
       }
     }, m.emoji, " ", s.tag?.replace("#", ""))))), /*#__PURE__*/React.createElement("div", {
       style: {
