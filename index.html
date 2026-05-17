@@ -52,15 +52,18 @@ const FB = {
     }
   },
   async set(path, data) {
-    try {
-      await fetch(`${FIREBASE_URL}/${path}.json`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
-      });
-    } catch (e) {}
+    const r = await fetch(`${FIREBASE_URL}/${path}.json`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error(`저장 실패 (${r.status}): ${err.substring(0, 100)}`);
+    }
+    return true;
   },
   async update(path, data) {
     try {
@@ -976,7 +979,12 @@ function App() {
       const data = await FB.get("posts");
       if (data) {
         const fp = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setPosts(fp);
+        // 로컬에만 있는 게시물(Firebase 전파 전)도 유지
+        setPosts(prev => {
+          const fbIds = new Set(fp.map(p => p.id));
+          const localOnly = prev.filter(p => !fbIds.has(p.id));
+          return [...localOnly, ...fp].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        });
       }
       setPostsReady(true);
     } catch (e) {}
@@ -988,7 +996,7 @@ function App() {
     const start = () => {
       if (iv) return;
       iv = setInterval(() => {
-        if (activeTab === 'feed' && document.visibilityState === 'visible') loadFromFirebase();
+        if (document.visibilityState === 'visible') loadFromFirebase();
       }, 45000);
     };
     const stop = () => {
@@ -1002,7 +1010,8 @@ function App() {
       stop();
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [loadFromFirebase, activeTab]);
+  }, [loadFromFirebase]); // activeTab 제거 - 탭 전환마다 재로드하면 업로드 직후 덮어써짐
+
   useEffect(() => {
     LS.set("dc_liked", liked);
   }, [liked]);
