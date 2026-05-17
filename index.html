@@ -566,6 +566,7 @@ function PostCard({
   onLike,
   onLove,
   onOpen,
+  onOpenPost,
   onComment,
   onManage,
   userType,
@@ -578,6 +579,7 @@ function PostCard({
   };
   const items = post.mediaList || [];
   const isOwn = post.userId && post.userId === currentUserId;
+  const goPost = onOpenPost || onOpen; // 게시물 상세 (없으면 프로필로 fallback)
   return /*#__PURE__*/React.createElement("div", {
     className: "card",
     style: {
@@ -668,21 +670,16 @@ function PostCard({
     }
   }, "\u22EF"))), /*#__PURE__*/React.createElement("div", {
     style: {
-      position: "relative"
-    }
+      position: "relative",
+      cursor: "pointer"
+    },
+    onClick: () => goPost(post)
   }, /*#__PURE__*/React.createElement(MediaView, {
     mediaList: items,
     emoji: m.emoji,
     color: m.color,
     height: 216,
     onImageClick: onImageClick ? i => onImageClick(post, i) : null
-  }), items.length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      inset: 0,
-      cursor: "pointer"
-    },
-    onClick: () => onOpen(post)
   }), items.length > 1 && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
@@ -709,7 +706,7 @@ function PostCard({
       whiteSpace: "pre-wrap",
       wordBreak: "break-word"
     },
-    onClick: () => onOpen(post)
+    onClick: () => goPost(post)
   }, post.desc)), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "7px 13px 10px"
@@ -811,6 +808,8 @@ function App() {
   const [loveModal, setLoveModal] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailTab, setDetailTab] = useState("gallery");
+  const [postDetail, setPostDetail] = useState(null); // 게시물 상세
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const [lightbox, setLightbox] = useState(null);
   const [commentModal, setCommentModal] = useState(null);
   const [manageModal, setManageModal] = useState(null);
@@ -903,6 +902,60 @@ function App() {
       });
     } catch (e) {
       setAiModal({
+        mode,
+        loading: false,
+        result: null,
+        error: `AI 오류: ${e.message}`
+      });
+    }
+  };
+
+  // 업로드 게시물 내용 AI (맞춤법/다듬기)
+  const [descAiModal, setDescAiModal] = useState(null);
+  const callDescAI = async mode => {
+    if (!globalApiKey) {
+      toast("⚠️ 관리자가 AI 키를 아직 설정하지 않았어요.");
+      return;
+    }
+    if (!desc.trim()) {
+      toast("✏️ 내용을 먼저 작성해주세요!");
+      return;
+    }
+    setDescAiModal({
+      mode,
+      loading: true,
+      result: null,
+      error: null
+    });
+    const prompt = mode === "spell" ? `아래 글의 맞춤법과 띄어쓰기를 검사하고 수정해주세요.\n\n원문:\n${desc}\n\n조건: 맞춤법과 띄어쓰기만 수정하고 내용은 바꾸지 마세요. 수정된 글만 출력하세요.` : `아래 글을 더 자연스럽게 다듬어주세요.\n\n원문:\n${desc}\n\n조건: 같은 내용을 유지하면서 문장을 자연스럽게 만들어주세요. 결과물만 출력하세요.`;
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": globalApiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 400,
+          messages: [{
+            role: "user",
+            content: prompt
+          }]
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || "API 오류");
+      setDescAiModal({
+        mode,
+        loading: false,
+        result: data.content?.[0]?.text || "",
+        error: null
+      });
+    } catch (e) {
+      setDescAiModal({
         mode,
         loading: false,
         result: null,
@@ -1945,6 +1998,286 @@ function App() {
       fontSize: 13
     }
   }, "\uCDE8\uC18C")))));
+
+  // ── 게시물 상세 화면 ──
+  if (postDetail) {
+    const s = postDetail;
+    const m = JOB_META[s.tag] || {
+      color: C.primary,
+      emoji: "✨"
+    };
+    const comments = s.commentList || [];
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "fixed",
+        top: 0,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: 520,
+        height: "100%",
+        background: C.surface,
+        overflowY: "auto",
+        overscrollBehavior: "contain"
+      }
+    }, /*#__PURE__*/React.createElement(Toast, {
+      msg: toastMsg
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "sticky",
+        top: 0,
+        background: "rgba(250,250,248,0.97)",
+        backdropFilter: "blur(12px)",
+        padding: "12px 16px 10px",
+        borderBottom: `1px solid ${C.g200}`,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        zIndex: 10
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => setPostDetail(null),
+      style: {
+        background: C.g100,
+        border: "none",
+        borderRadius: 12,
+        padding: "7px 14px",
+        fontWeight: 700,
+        fontSize: 13,
+        color: C.navy
+      }
+    }, "\u2190 \uB4A4\uB85C"), /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => {
+        setPostDetail(null);
+        openDetail(s);
+      },
+      style: {
+        background: "none",
+        border: "none",
+        padding: 0,
+        textAlign: "left",
+        flex: 1
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.navy
+      }
+    }, s.name), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.g400
+      }
+    }, s.school, " \xB7 ", timeAgo(s.createdAt))), /*#__PURE__*/React.createElement("span", {
+      style: {
+        background: `${m.color}18`,
+        color: m.color,
+        borderRadius: 10,
+        padding: "4px 10px",
+        fontSize: 11,
+        fontWeight: 700,
+        whiteSpace: "nowrap"
+      }
+    }, m.emoji, " ", s.tag?.replace("#", ""))), (s.mediaList || []).length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(MediaView, {
+      mediaList: s.mediaList,
+      emoji: m.emoji,
+      color: m.color,
+      height: 300,
+      onImageClick: i => setLightbox({
+        items: s.mediaList,
+        index: i
+      })
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "16px 16px 10px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 15,
+        color: C.navy,
+        lineHeight: 1.8,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word"
+      }
+    }, s.desc)), s.selfPraise && /*#__PURE__*/React.createElement("div", {
+      style: {
+        margin: "0 16px 12px",
+        background: `${C.gold}10`,
+        borderRadius: 14,
+        padding: "12px 14px",
+        border: `1px solid ${C.gold}33`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        color: C.gold,
+        marginBottom: 4
+      }
+    }, "\uD83C\uDF1F \uB098\uC5D0\uAC8C \uD558\uB294 \uC140\uD504 \uCE6D\uCC2C"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: C.navy,
+        lineHeight: 1.6
+      }
+    }, s.selfPraise)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "0 16px 14px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: 5
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: C.g400
+      }
+    }, "\uC9C1\uBB34 \uC219\uB828\uB3C4 (\uC790\uAE30\uD3C9\uAC00)"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: m.color
+      }
+    }, s.progress, "\uC810")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: 7,
+        background: C.g100,
+        borderRadius: 4,
+        overflow: "hidden"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        height: "100%",
+        width: `${s.progress}%`,
+        background: m.color,
+        borderRadius: 4
+      }
+    }))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "0 16px 16px",
+        display: "flex",
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => handleLike(s),
+      style: {
+        flex: 1,
+        padding: "11px",
+        borderRadius: 12,
+        border: "none",
+        background: liked[s.id] ? "#FFF3E0" : C.g100,
+        color: liked[s.id] ? C.gold : C.g600,
+        fontWeight: 700,
+        fontSize: 13
+      }
+    }, liked[s.id] ? "💛" : "🤍", " \uC751\uC6D0 ", s.likes || 0), /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => setCommentModal(s),
+      style: {
+        flex: 1,
+        padding: "11px",
+        borderRadius: 12,
+        border: "none",
+        background: C.g100,
+        color: C.g600,
+        fontWeight: 700,
+        fontSize: 13
+      }
+    }, "\uD83D\uDCAC \uB313\uAE00 ", comments.length)), comments.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "0 16px 100px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.navy,
+        marginBottom: 12
+      }
+    }, "\uD83D\uDCAC \uB313\uAE00 ", comments.length, "\uAC1C"), comments.map((c, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: "flex",
+        gap: 10,
+        marginBottom: 12,
+        animation: `fadeUp 0.3s ${i * 0.04}s ease forwards`,
+        opacity: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 34,
+        height: 34,
+        borderRadius: 11,
+        background: `${m.color}18`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 18,
+        flexShrink: 0,
+        overflow: "hidden"
+      }
+    }, c.pic ? /*#__PURE__*/React.createElement("img", {
+      src: c.pic,
+      style: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover"
+      },
+      alt: ""
+    }) : c.avatar || "👤"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        background: C.g100,
+        borderRadius: "4px 14px 14px 14px",
+        padding: "9px 12px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: 3
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: C.navy
+      }
+    }, c.author), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 10,
+        color: C.g400
+      }
+    }, c.createdAt ? timeAgo(c.createdAt) : c.time)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: C.g600,
+        lineHeight: 1.55
+      }
+    }, c.text))))), commentModal && /*#__PURE__*/React.createElement(CommentModal, {
+      post: commentModal,
+      currentUser: currentUser,
+      onClose: () => setCommentModal(null),
+      onSubmit: (postId, comment) => {
+        handleCommentSubmit(postId, comment);
+        setPostDetail(p => p && p.id === postId ? {
+          ...p,
+          commentList: [...(p.commentList || []), comment]
+        } : p);
+      }
+    }), lightbox && /*#__PURE__*/React.createElement(Lightbox, {
+      items: lightbox.items,
+      initialIndex: lightbox.index,
+      onClose: () => setLightbox(null)
+    }));
+  }
   if (detail) {
     const s = detail;
     const m = JOB_META[s.tag] || {
@@ -2680,6 +3013,7 @@ function App() {
     onLike: handleLike,
     onLove: p => setLoveModal(p),
     onOpen: openDetail,
+    onOpenPost: p => setPostDetail(p),
     onComment: p => setCommentModal(p),
     onManage: p => setManageModal(p),
     userType: userType,
@@ -2808,6 +3142,7 @@ function App() {
       onLike: handleLike,
       onLove: p => setLoveModal(p),
       onOpen: openDetail,
+      onOpenPost: p => setPostDetail(p),
       onComment: p => setCommentModal(p),
       userType: userType,
       onImageClick: (post, idx) => setLightbox({
@@ -3051,7 +3386,43 @@ function App() {
       color: C.g400,
       textAlign: "right"
     }
-  }, desc.length, "\uC790"), /*#__PURE__*/React.createElement("div", {
+  }, desc.length, "\uC790"), desc.trim() && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => callDescAI("spell"),
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      padding: "6px 11px",
+      borderRadius: 18,
+      border: `1.5px solid ${C.accent}`,
+      background: `${C.accent}10`,
+      color: C.accent,
+      fontSize: 11,
+      fontWeight: 700
+    }
+  }, "\uD83D\uDD0D \uB9DE\uCDA4\uBC95 \uAC80\uC0AC"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => callDescAI("polish"),
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      padding: "6px 11px",
+      borderRadius: 18,
+      border: `1.5px solid ${C.primary}`,
+      background: `${C.primary}10`,
+      color: C.primary,
+      fontSize: 11,
+      fontWeight: 700
+    }
+  }, "\u270F\uFE0F \uBB38\uC7A5 \uB2E4\uB4EC\uAE30")), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 10,
       background: C.g100,
@@ -3573,7 +3944,8 @@ function App() {
     style: {
       display: "flex",
       gap: 8,
-      marginTop: 10
+      marginTop: 10,
+      flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -3585,11 +3957,112 @@ function App() {
       fontWeight: 700,
       boxShadow: "0 2px 6px rgba(0,0,0,0.06)"
     }
-  }, "\uAC8C\uC2DC\uBB3C ", posts.filter(p => p.userId === currentUser?.id).length, "\uAC1C"))))), /*#__PURE__*/React.createElement("div", {
+  }, "\uAC8C\uC2DC\uBB3C ", posts.filter(p => p.userId === currentUser?.id).length, "\uAC1C"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setShowPdfModal(true),
+    style: {
+      background: `${C.primary}18`,
+      border: `1px solid ${C.primary}33`,
+      borderRadius: 10,
+      padding: "4px 12px",
+      fontSize: 12,
+      color: C.primary,
+      fontWeight: 700
+    }
+  }, "\uD83D\uDCC4 PDF \uCD9C\uB825"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "14px 14px 0"
     }
   }, userType === "student" && (() => {
+    // 달성 배지 계산
+    const myPosts = posts.filter(p => p.userId === currentUser?.id);
+    const totalLikes = myPosts.reduce((s, p) => s + (p.likes || 0), 0);
+    const BADGES = [{
+      emoji: "🌱",
+      label: "첫 걸음",
+      ok: myPosts.length >= 1,
+      desc: "첫 게시물 업로드"
+    }, {
+      emoji: "🔥",
+      label: "5개 달성",
+      ok: myPosts.length >= 5,
+      desc: "게시물 5개"
+    }, {
+      emoji: "⭐",
+      label: "10개 달성",
+      ok: myPosts.length >= 10,
+      desc: "게시물 10개"
+    }, {
+      emoji: "💛",
+      label: "인기스타",
+      ok: totalLikes >= 10,
+      desc: "응원 10개 받기"
+    }, {
+      emoji: "🎯",
+      label: "숙련자",
+      ok: myPosts.some(p => p.progress >= 80),
+      desc: "숙련도 80점"
+    }, {
+      emoji: "🏆",
+      label: "완벽주의",
+      ok: myPosts.some(p => p.progress >= 100),
+      desc: "숙련도 100점"
+    }];
+    const earned = BADGES.filter(b => b.ok);
+    if (earned.length === 0) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: C.white,
+        borderRadius: 14,
+        padding: "13px 14px",
+        marginBottom: 9,
+        boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.navy,
+        marginBottom: 10
+      }
+    }, "\uD83C\uDFC5 \uB2EC\uC131\uD55C \uBC30\uC9C0 ", earned.length, "/", BADGES.length), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap"
+      }
+    }, BADGES.map((b, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 3,
+        opacity: b.ok ? 1 : 0.3,
+        transition: "opacity .2s"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        background: b.ok ? `${C.gold}20` : C.g100,
+        border: `2px solid ${b.ok ? C.gold : C.g200}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 22
+      }
+    }, b.emoji), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 9,
+        color: b.ok ? C.gold : C.g400,
+        fontWeight: 700,
+        textAlign: "center",
+        lineHeight: 1.2
+      }
+    }, b.label)))));
+  })(), userType === "student" && (() => {
     // 최근 사진 미리보기
     const myPosts = posts.filter(p => p.userId === currentUser?.id);
     const previewItems = myPosts.flatMap(p => (p.mediaList || []).filter(m => !m.type?.startsWith("video")).map(m => ({
@@ -4120,6 +4593,7 @@ function App() {
       onLike: handleLike,
       onLove: p => setLoveModal(p),
       onOpen: openDetail,
+      onOpenPost: p => setPostDetail(p),
       onComment: p => setCommentModal(p),
       onManage: p => setManageModal(p),
       userType: userType,
@@ -4710,7 +5184,443 @@ function App() {
       fontSize: 14,
       boxShadow: "0 4px 14px rgba(255,107,53,0.35)"
     }
-  }, "\u2705 \uB0B4 \uC18C\uAC1C\uC5D0 \uC801\uC6A9\uD558\uAE30"))))));
+  }, "\u2705 \uB0B4 \uC18C\uAC1C\uC5D0 \uC801\uC6A9\uD558\uAE30"))))), descAiModal && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      zIndex: 300,
+      display: "flex",
+      alignItems: "flex-end",
+      justifyContent: "center"
+    },
+    onClick: () => !descAiModal.loading && setDescAiModal(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: "24px 24px 0 0",
+      padding: "24px 18px 36px",
+      width: "100%",
+      maxWidth: 520,
+      animation: "slideUp 0.3s ease",
+      maxHeight: "80vh",
+      display: "flex",
+      flexDirection: "column"
+    },
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 22
+    }
+  }, descAiModal.mode === "spell" ? "🔍" : "✏️"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, descAiModal.mode === "spell" ? "맞춤법 검사 결과" : "문장 다듬기 결과"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.g400
+    }
+  }, "Claude AI\uAC00 \uB3C4\uC640\uB4DC\uB838\uC5B4\uC694")), !descAiModal.loading && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setDescAiModal(null),
+    style: {
+      background: C.g100,
+      border: "none",
+      borderRadius: 10,
+      padding: "7px 12px",
+      fontSize: 13,
+      color: C.g600,
+      fontWeight: 700
+    }
+  }, "\uB2EB\uAE30")), descAiModal.loading ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "32px 0"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "inline-block",
+      width: 32,
+      height: 32,
+      border: `3px solid ${C.g200}`,
+      borderTopColor: C.gold,
+      borderRadius: "50%",
+      animation: "spin 0.8s linear infinite",
+      marginBottom: 12
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.g400
+    }
+  }, "AI\uAC00 \uAC80\uD1A0 \uC911\uC774\uC5D0\uC694...")) : descAiModal.error ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "24px 0",
+      color: "#E53935"
+    }
+  }, descAiModal.error) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto",
+      background: C.g100,
+      borderRadius: 14,
+      padding: "14px",
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.navy,
+      lineHeight: 1.8,
+      whiteSpace: "pre-wrap"
+    }
+  }, descAiModal.result)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setDescAiModal(null),
+    style: {
+      flex: 1,
+      padding: "13px",
+      borderRadius: 14,
+      border: `1px solid ${C.g200}`,
+      background: C.white,
+      color: C.g600,
+      fontWeight: 600,
+      fontSize: 14
+    }
+  }, "\uB2EB\uAE30"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setDesc(descAiModal.result);
+      setDescAiModal(null);
+      toast("✅ 내용에 적용됐어요!");
+    },
+    style: {
+      flex: 2,
+      padding: "13px",
+      borderRadius: 14,
+      border: "none",
+      background: `linear-gradient(135deg,${C.primary},${C.gold})`,
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: 14
+    }
+  }, "\u2705 \uB0B4\uC6A9\uC5D0 \uC801\uC6A9\uD558\uAE30"))))), showPdfModal && (() => {
+    const myPosts = posts.filter(p => p.userId === currentUser?.id).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const totalLikes = myPosts.reduce((s, p) => s + (p.likes || 0), 0);
+    const avgProgress = myPosts.length ? Math.round(myPosts.reduce((s, p) => s + (p.progress || 0), 0) / myPosts.length) : 0;
+    const BADGES = [{
+      emoji: "🌱",
+      label: "첫 걸음",
+      ok: myPosts.length >= 1
+    }, {
+      emoji: "🔥",
+      label: "5개 달성",
+      ok: myPosts.length >= 5
+    }, {
+      emoji: "⭐",
+      label: "10개 달성",
+      ok: myPosts.length >= 10
+    }, {
+      emoji: "💛",
+      label: "응원 10개",
+      ok: totalLikes >= 10
+    }, {
+      emoji: "🎯",
+      label: "숙련자",
+      ok: myPosts.some(p => p.progress >= 80)
+    }, {
+      emoji: "🏆",
+      label: "완벽",
+      ok: myPosts.some(p => p.progress >= 100)
+    }];
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        zIndex: 400,
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        overflowY: "auto",
+        padding: "20px 0"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: C.white,
+        borderRadius: 24,
+        width: "calc(100% - 28px)",
+        maxWidth: 480,
+        padding: "22px 18px 28px",
+        margin: "auto"
+      },
+      onClick: e => e.stopPropagation()
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 18
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 17,
+        fontWeight: 900,
+        color: C.navy
+      }
+    }, "\uD83D\uDCC4 \uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uBBF8\uB9AC\uBCF4\uAE30"), /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => setShowPdfModal(false),
+      style: {
+        background: C.g100,
+        border: "none",
+        borderRadius: 10,
+        padding: "7px 12px",
+        fontSize: 13,
+        color: C.g600,
+        fontWeight: 700
+      }
+    }, "\uB2EB\uAE30")), /*#__PURE__*/React.createElement("div", {
+      id: "pdf-content",
+      style: {
+        border: `1px solid ${C.g200}`,
+        borderRadius: 14,
+        padding: "18px",
+        marginBottom: 14
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "center",
+        marginBottom: 16,
+        paddingBottom: 14,
+        borderBottom: `1px solid ${C.g200}`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 60,
+        height: 60,
+        borderRadius: 20,
+        background: `${C.primary}22`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 32,
+        margin: "0 auto 10px"
+      }
+    }, currentUser?.pic ? /*#__PURE__*/React.createElement("img", {
+      src: currentUser.pic,
+      style: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        borderRadius: 18
+      },
+      alt: ""
+    }) : currentUser?.avatar || "👩"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 20,
+        fontWeight: 900,
+        color: C.navy
+      }
+    }, currentUser?.name), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: C.g400
+      }
+    }, currentUser?.school)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 8,
+        marginBottom: 14
+      }
+    }, [["게시물", myPosts.length + "개"], ["받은 응원", totalLikes + "개"], ["평균 숙련도", avgProgress + "점"]].map(([l, v]) => /*#__PURE__*/React.createElement("div", {
+      key: l,
+      style: {
+        background: C.g100,
+        borderRadius: 10,
+        padding: "10px 6px",
+        textAlign: "center"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 16,
+        fontWeight: 900,
+        color: C.primary
+      }
+    }, v), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: C.g400,
+        marginTop: 2
+      }
+    }, l)))), (resumeText || resumeStrengths.length > 0 || resumeCertificate) && /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: `${C.primary}06`,
+        borderRadius: 10,
+        padding: "12px",
+        marginBottom: 12,
+        border: `1px solid ${C.primary}18`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: C.navy,
+        marginBottom: 6
+      }
+    }, "\uD83D\uDCDD \uC790\uAE30\uC18C\uAC1C\uC11C"), resumeText && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.g600,
+        lineHeight: 1.7,
+        marginBottom: resumeStrengths.length ? 8 : 0
+      }
+    }, resumeText), resumeStrengths.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 4,
+        flexWrap: "wrap",
+        marginBottom: resumeCertificate ? 6 : 0
+      }
+    }, resumeStrengths.map((s, i) => /*#__PURE__*/React.createElement("span", {
+      key: i,
+      style: {
+        background: `${C.primary}15`,
+        color: C.primary,
+        borderRadius: 12,
+        padding: "2px 8px",
+        fontSize: 11
+      }
+    }, s))), resumeCertificate && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.g600
+      }
+    }, "\uD83C\uDFC6 \uC790\uACA9\uC99D: ", resumeCertificate)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 12
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: C.navy,
+        marginBottom: 8
+      }
+    }, "\uD83C\uDFC5 \uB2EC\uC131 \uBC30\uC9C0"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 6,
+        flexWrap: "wrap"
+      }
+    }, BADGES.filter(b => b.ok).map((b, i) => /*#__PURE__*/React.createElement("span", {
+      key: i,
+      style: {
+        background: `${C.gold}18`,
+        border: `1px solid ${C.gold}44`,
+        borderRadius: 12,
+        padding: "4px 10px",
+        fontSize: 11,
+        fontWeight: 600
+      }
+    }, b.emoji, " ", b.label)), BADGES.filter(b => b.ok).length === 0 && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        color: C.g400
+      }
+    }, "\uC544\uC9C1 \uB2EC\uC131\uD55C \uBC30\uC9C0\uAC00 \uC5C6\uC5B4\uC694"))), myPosts.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: C.navy,
+        marginBottom: 8
+      }
+    }, "\uD83D\uDCCA \uC9C1\uBB34\uBCC4 \uC219\uB828\uB3C4"), [...new Set(myPosts.map(p => p.tag))].map(t => {
+      const tPosts = myPosts.filter(p => p.tag === t);
+      const avg = Math.round(tPosts.reduce((s, p) => s + (p.progress || 0), 0) / tPosts.length);
+      const m = JOB_META[t] || {
+        color: C.primary,
+        emoji: "✨"
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        key: t,
+        style: {
+          marginBottom: 8
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 3
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 11,
+          color: C.g600
+        }
+      }, m.emoji, " ", t.replace("#", "")), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 11,
+          fontWeight: 700,
+          color: m.color
+        }
+      }, avg, "\uC810")), /*#__PURE__*/React.createElement("div", {
+        style: {
+          height: 6,
+          background: C.g100,
+          borderRadius: 3,
+          overflow: "hidden"
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          height: "100%",
+          width: `${avg}%`,
+          background: m.color,
+          borderRadius: 3
+        }
+      })));
+    }))), /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: () => {
+        const content = document.getElementById("pdf-content").innerHTML;
+        const w = window.open("", "_blank", "width=600,height=800");
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${currentUser?.name} 포트폴리오</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans KR',sans-serif;padding:20px;max-width:500px;margin:0 auto}@media print{button{display:none}}</style></head><body>${content}<br/><button onclick="window.print()" style="width:100%;padding:14px;background:#FF6B35;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">🖨️ PDF로 저장하기</button></body></html>`);
+        w.document.close();
+      },
+      style: {
+        width: "100%",
+        padding: "14px",
+        borderRadius: 14,
+        border: "none",
+        background: `linear-gradient(135deg,${C.primary},${C.gold})`,
+        color: "#fff",
+        fontSize: 15,
+        fontWeight: 900,
+        boxShadow: "0 4px 14px rgba(255,107,53,0.35)"
+      }
+    }, "\uD83D\uDDA8\uFE0F \uC778\uC1C4 / PDF \uC800\uC7A5")));
+  })());
 }
 function ManageModal({
   post,
