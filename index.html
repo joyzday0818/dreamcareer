@@ -177,7 +177,8 @@ function compressFile(file) {
       }
       const img = new Image();
       img.onload = () => {
-        const MAX = 1600;
+        // 동시 업로드 시 Firebase 부하 감소: 최대 720px, 품질 0.65
+        const MAX = 720;
         let w = img.width,
           h = img.height;
         if (w > MAX || h > MAX) {
@@ -194,7 +195,7 @@ function compressFile(file) {
         canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
         res({
-          url: canvas.toDataURL("image/jpeg", 0.88),
+          url: canvas.toDataURL("image/jpeg", 0.65),
           type: "image/jpeg"
         });
       };
@@ -765,7 +766,7 @@ function PostCard({
       fontWeight: 700,
       fontSize: 12
     }
-  }, liked ? "💛" : "🤍", " \uC751\uC6D0 ", (post.likes || 0) + (liked ? 1 : 0)), /*#__PURE__*/React.createElement("button", {
+  }, liked ? "💛" : "🤍", " \uC751\uC6D0 ", post.likes || 0), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => onComment(post),
     style: {
@@ -834,7 +835,7 @@ function App() {
   const [filterTag, setFilterTag] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPortfolio, setShowPortfolio] = useState(false);
-  const [portfolioView, setPortfolioView] = useState(null);
+  const [portfolioView, setPortfolioView] = useState("grid"); // 기본값 사진
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   // ✅ 변경1: 자기소개서 상태
@@ -4060,10 +4061,10 @@ function App() {
         padding: "10px 12px",
         gap: 8
       }
-    }, [["card", "☰ 게시물"], ["grid", "⊞ 사진"]].map(([val, lbl]) => /*#__PURE__*/React.createElement("button", {
+    }, [["grid", "⊞ 사진"], ["card", "☰ 게시물"]].map(([val, lbl]) => /*#__PURE__*/React.createElement("button", {
       key: val,
       className: "btn",
-      onClick: () => setPortfolioView(v => v === val ? null : val),
+      onClick: () => setPortfolioView(v => v === val ? val : val),
       style: {
         flex: 1,
         display: "flex",
@@ -4086,7 +4087,7 @@ function App() {
         color: C.g400,
         fontSize: 12
       }
-    }, "\uC704\uC5D0\uC11C \uBCF4\uAE30 \uBC29\uC2DD\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694"), portfolioView && myPosts.length === 0 && /*#__PURE__*/React.createElement("div", {
+    }), portfolioView && myPosts.length === 0 && /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "center",
         padding: "28px 0",
