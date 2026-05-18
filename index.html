@@ -791,24 +791,25 @@ function PostCard({
       fontSize: 10,
       color: C.g400
     }
-  }, "\uC9C1\uBB34 \uC219\uB828\uB3C4"), /*#__PURE__*/React.createElement("div", {
+  }, "\uC9C1\uBB34 \uC219\uB828\uB3C4 (\uC790\uAE30\uD3C9\uAC00)"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      gap: 6,
+      gap: 8,
       alignItems: "center"
     }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      color: C.g400
-    }
-  }, "\uD83E\uDDD1\u200D\uD83C\uDF93", post.progress, "\uC810"), post.teacherScore != null && /*#__PURE__*/React.createElement("span", {
+  }, post.teacherScore != null && /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
       color: "#2D6A4F",
       fontWeight: 700
     }
-  }, "\uD83D\uDC69\u200D\uD83C\uDFEB", post.teacherScore, "\uC810"))), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDC69\u200D\uD83C\uDFEB ", post.teacherScore, "\uC810"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: m.color
+    }
+  }, post.progress, "\uC810"))), /*#__PURE__*/React.createElement("div", {
     style: {
       height: 5,
       background: C.g100,
@@ -2292,24 +2293,25 @@ function App() {
         fontSize: 11,
         color: C.g400
       }
-    }, "\uC9C1\uBB34 \uC219\uB828\uB3C4"), /*#__PURE__*/React.createElement("div", {
+    }, "\uC9C1\uBB34 \uC219\uB828\uB3C4 (\uC790\uAE30\uD3C9\uAC00)"), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 8,
         alignItems: "center"
       }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11,
-        color: C.g400
-      }
-    }, "\uD83E\uDDD1\u200D\uD83C\uDF93 ", s.progress, "\uC810"), s.teacherScore != null && /*#__PURE__*/React.createElement("span", {
+    }, s.teacherScore != null && /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 11,
         color: "#2D6A4F",
         fontWeight: 700
       }
-    }, "\uD83D\uDC69\u200D\uD83C\uDFEB ", s.teacherScore, "\uC810"))), /*#__PURE__*/React.createElement("div", {
+    }, "\uD83D\uDC69\u200D\uD83C\uDFEB ", s.teacherScore, "\uC810"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: m.color
+      }
+    }, s.progress, "\uC810"))), /*#__PURE__*/React.createElement("div", {
       style: {
         height: 7,
         background: C.g100,
