@@ -168,69 +168,48 @@ const DEMO_POSTS = [];
 // 전역 배지 정의 (posts, resume 데이터로 계산)
 function calcBadges(posts, resume) {
   const totalLikes = posts.reduce((s, p) => s + (p.likes || 0), 0);
-  const totalComments = posts.reduce((s, p) => s + (p.commentList || []).length, 0);
   const totalMedia = posts.reduce((s, p) => s + (p.mediaList || []).length, 0);
   const tagSet = new Set(posts.map(p => p.tag).filter(Boolean));
   return [{
     emoji: "🌱",
     label: "첫 걸음",
-    ok: posts.length >= 1,
-    desc: "첫 게시물 업로드"
+    ok: posts.length >= 1
   }, {
     emoji: "🔥",
     label: "5개 달성",
-    ok: posts.length >= 5,
-    desc: "게시물 5개"
+    ok: posts.length >= 5
   }, {
     emoji: "⭐",
     label: "10개 달성",
-    ok: posts.length >= 10,
-    desc: "게시물 10개"
+    ok: posts.length >= 10
   }, {
     emoji: "💛",
     label: "인기스타",
-    ok: totalLikes >= 10,
-    desc: "응원 10개 받기"
+    ok: totalLikes >= 10
   }, {
     emoji: "👑",
     label: "응원 왕",
-    ok: totalLikes >= 30,
-    desc: "응원 30개 받기"
-  }, {
-    emoji: "💬",
-    label: "댓글 친구",
-    ok: totalComments >= 5,
-    desc: "댓글 5개 받기"
+    ok: totalLikes >= 30
   }, {
     emoji: "📸",
     label: "사진 왕",
-    ok: totalMedia >= 10,
-    desc: "사진 10장 업로드"
+    ok: totalMedia >= 10
   }, {
     emoji: "🎨",
     label: "다재다능",
-    ok: tagSet.size >= 3,
-    desc: "직무 3가지 도전"
+    ok: tagSet.size >= 3
   }, {
     emoji: "📝",
-    label: "자기소개 완성",
-    ok: !!resume?.text,
-    desc: "자기소개서 작성"
+    label: "자기소개",
+    ok: !!resume?.text
   }, {
     emoji: "🎯",
     label: "숙련자",
-    ok: posts.some(p => p.progress >= 80),
-    desc: "숙련도 80점"
-  }, {
-    emoji: "🏆",
-    label: "완벽주의",
-    ok: posts.some(p => p.progress >= 100),
-    desc: "숙련도 100점"
+    ok: posts.some(p => p.progress >= 80)
   }, {
     emoji: "🌈",
     label: "올라운더",
-    ok: tagSet.size >= 2 && totalLikes >= 5 && posts.length >= 3,
-    desc: "다양한 활동"
+    ok: tagSet.size >= 2 && totalLikes >= 5 && posts.length >= 3
   }];
 }
 function compressFile(file) {
@@ -784,38 +763,26 @@ function PostCard({
     style: {
       display: "flex",
       justifyContent: "space-between",
-      marginBottom: 4
+      marginBottom: 3
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
       color: C.g400
     }
-  }, "\uC9C1\uBB34 \uC219\uB828\uB3C4 (\uC790\uAE30\uD3C9\uAC00)"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8,
-      alignItems: "center"
-    }
-  }, post.teacherScore != null && /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      color: "#2D6A4F",
-      fontWeight: 700
-    }
-  }, "\uD83D\uDC69\u200D\uD83C\uDFEB ", post.teacherScore, "\uC810"), /*#__PURE__*/React.createElement("span", {
+  }, "\uD83E\uDDD1\u200D\uD83C\uDF93 \uC790\uAE30\uD3C9\uAC00"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
       fontWeight: 700,
       color: m.color
     }
-  }, post.progress, "\uC810"))), /*#__PURE__*/React.createElement("div", {
+  }, post.progress, "\uC810")), /*#__PURE__*/React.createElement("div", {
     style: {
       height: 5,
       background: C.g100,
       borderRadius: 3,
       overflow: "hidden",
-      marginBottom: post.teacherScore != null ? 3 : 0
+      marginBottom: post.teacherScore != null ? 8 : 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -824,12 +791,31 @@ function PostCard({
       background: m.color,
       borderRadius: 3
     }
-  })), post.teacherScore != null && /*#__PURE__*/React.createElement("div", {
+  })), post.teacherScore != null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: 3
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: "#2D6A4F",
+      fontWeight: 600
+    }
+  }, "\uD83D\uDC69\u200D\uD83C\uDFEB \uAD50\uC0AC\uD3C9\uAC00"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: "#2D6A4F"
+    }
+  }, post.teacherScore, "\uC810")), /*#__PURE__*/React.createElement("div", {
     style: {
       height: 5,
       background: C.g100,
       borderRadius: 3,
-      overflow: "hidden"
+      overflow: "hidden",
+      marginBottom: 6
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -838,7 +824,23 @@ function PostCard({
       background: "#2D6A4F",
       borderRadius: 3
     }
-  }))), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: C.g400
+    }
+  }, "\uD83D\uDCCA \uC885\uD569 \uD3C9\uADE0"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      fontWeight: 900,
+      color: C.navy
+    }
+  }, Math.round((post.progress + post.teacherScore) / 2), "\uC810")))), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "0 13px 13px",
       display: "flex",
@@ -2293,31 +2295,19 @@ function App() {
         fontSize: 11,
         color: C.g400
       }
-    }, "\uC9C1\uBB34 \uC219\uB828\uB3C4 (\uC790\uAE30\uD3C9\uAC00)"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 8,
-        alignItems: "center"
-      }
-    }, s.teacherScore != null && /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 11,
-        color: "#2D6A4F",
-        fontWeight: 700
-      }
-    }, "\uD83D\uDC69\u200D\uD83C\uDFEB ", s.teacherScore, "\uC810"), /*#__PURE__*/React.createElement("span", {
+    }, "\uD83E\uDDD1\u200D\uD83C\uDF93 \uC790\uAE30\uD3C9\uAC00"), /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 12,
         fontWeight: 700,
         color: m.color
       }
-    }, s.progress, "\uC810"))), /*#__PURE__*/React.createElement("div", {
+    }, s.progress, "\uC810")), /*#__PURE__*/React.createElement("div", {
       style: {
         height: 7,
         background: C.g100,
         borderRadius: 4,
         overflow: "hidden",
-        marginBottom: s.teacherScore != null ? 4 : 0
+        marginBottom: s.teacherScore != null ? 10 : 0
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2328,10 +2318,29 @@ function App() {
       }
     })), s.teacherScore != null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       style: {
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: 5
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: "#2D6A4F",
+        fontWeight: 600
+      }
+    }, "\uD83D\uDC69\u200D\uD83C\uDFEB \uAD50\uC0AC\uD3C9\uAC00"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#2D6A4F"
+      }
+    }, s.teacherScore, "\uC810")), /*#__PURE__*/React.createElement("div", {
+      style: {
         height: 7,
         background: C.g100,
         borderRadius: 4,
-        overflow: "hidden"
+        overflow: "hidden",
+        marginBottom: 8
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2344,20 +2353,21 @@ function App() {
       style: {
         display: "flex",
         justifyContent: "space-between",
-        marginTop: 6
+        padding: "6px 0",
+        borderTop: `1px solid ${C.g200}`
       }
     }, /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 10,
+        fontSize: 11,
         color: C.g400
       }
-    }, "\uC885\uD569 \uD3C9\uADE0"), /*#__PURE__*/React.createElement("span", {
+    }, "\uD83D\uDCCA \uC885\uD569 \uD3C9\uADE0"), /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 11,
-        fontWeight: 700,
+        fontSize: 13,
+        fontWeight: 900,
         color: C.navy
       }
-    }, Math.round((s.progress + (s.teacherScore || 0)) / 2), "\uC810")), s.teacherComment && /*#__PURE__*/React.createElement("div", {
+    }, Math.round((s.progress + s.teacherScore) / 2), "\uC810")), s.teacherComment && /*#__PURE__*/React.createElement("div", {
       style: {
         marginTop: 8,
         background: "#E8F5E9",
@@ -2751,21 +2761,21 @@ function App() {
       style: {
         background: "rgba(255,255,255,0.75)",
         borderRadius: 14,
-        padding: "10px 12px",
+        padding: "10px 10px",
         marginBottom: 10
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 700,
         color: C.navy,
-        marginBottom: 8
+        marginBottom: 7
       }
     }, "\uD83C\uDFC5 \uB2EC\uC131 \uBC30\uC9C0 ", earnedBadges.length, "/", BADGES_DEF.length), /*#__PURE__*/React.createElement("div", {
       style: {
-        display: "flex",
-        gap: 6,
-        flexWrap: "wrap"
+        display: "grid",
+        gridTemplateColumns: "repeat(10,1fr)",
+        gap: 3
       }
     }, BADGES_DEF.map((b, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
@@ -2774,26 +2784,28 @@ function App() {
         flexDirection: "column",
         alignItems: "center",
         gap: 2,
-        opacity: b.ok ? 1 : 0.3
+        opacity: b.ok ? 1 : 0.25
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        width: 36,
-        height: 36,
-        borderRadius: 11,
+        width: 28,
+        height: 28,
+        borderRadius: 9,
         background: b.ok ? `${C.gold}25` : C.g100,
         border: `1.5px solid ${b.ok ? C.gold : C.g200}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 18
+        fontSize: 14
       }
     }, b.emoji), /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 8,
+        fontSize: 6.5,
         color: b.ok ? C.gold : C.g400,
         fontWeight: 700,
-        textAlign: "center"
+        textAlign: "center",
+        lineHeight: 1.1,
+        wordBreak: "keep-all"
       }
     }, b.label))))), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -4409,62 +4421,32 @@ function App() {
       padding: "14px 14px 0"
     }
   }, userType === "student" && (() => {
-    // 달성 배지 계산
     const myPosts = posts.filter(p => p.userId === currentUser?.id);
-    const totalLikes = myPosts.reduce((s, p) => s + (p.likes || 0), 0);
-    const BADGES = [{
-      emoji: "🌱",
-      label: "첫 걸음",
-      ok: myPosts.length >= 1,
-      desc: "첫 게시물 업로드"
-    }, {
-      emoji: "🔥",
-      label: "5개 달성",
-      ok: myPosts.length >= 5,
-      desc: "게시물 5개"
-    }, {
-      emoji: "⭐",
-      label: "10개 달성",
-      ok: myPosts.length >= 10,
-      desc: "게시물 10개"
-    }, {
-      emoji: "💛",
-      label: "인기스타",
-      ok: totalLikes >= 10,
-      desc: "응원 10개 받기"
-    }, {
-      emoji: "🎯",
-      label: "숙련자",
-      ok: myPosts.some(p => p.progress >= 80),
-      desc: "숙련도 80점"
-    }, {
-      emoji: "🏆",
-      label: "완벽주의",
-      ok: myPosts.some(p => p.progress >= 100),
-      desc: "숙련도 100점"
-    }];
+    const BADGES = calcBadges(myPosts, {
+      text: resumeText
+    });
     const earned = BADGES.filter(b => b.ok);
     if (earned.length === 0) return null;
     return /*#__PURE__*/React.createElement("div", {
       style: {
         background: C.white,
         borderRadius: 14,
-        padding: "13px 14px",
+        padding: "12px 12px",
         marginBottom: 9,
         boxShadow: "0 2px 6px rgba(0,0,0,0.04)"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: 700,
         color: C.navy,
-        marginBottom: 10
+        marginBottom: 8
       }
     }, "\uD83C\uDFC5 \uB2EC\uC131\uD55C \uBC30\uC9C0 ", earned.length, "/", BADGES.length), /*#__PURE__*/React.createElement("div", {
       style: {
-        display: "flex",
-        gap: 8,
-        flexWrap: "wrap"
+        display: "grid",
+        gridTemplateColumns: "repeat(10,1fr)",
+        gap: 4
       }
     }, BADGES.map((b, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
@@ -4472,29 +4454,29 @@ function App() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 3,
-        opacity: b.ok ? 1 : 0.3,
-        transition: "opacity .2s"
+        gap: 2,
+        opacity: b.ok ? 1 : 0.28
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        background: b.ok ? `${C.gold}20` : C.g100,
-        border: `2px solid ${b.ok ? C.gold : C.g200}`,
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        background: b.ok ? `${C.gold}22` : C.g100,
+        border: `1.5px solid ${b.ok ? C.gold : C.g200}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 22
+        fontSize: 16
       }
     }, b.emoji), /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 9,
+        fontSize: 7,
         color: b.ok ? C.gold : C.g400,
         fontWeight: 700,
         textAlign: "center",
-        lineHeight: 1.2
+        lineHeight: 1.1,
+        wordBreak: "keep-all"
       }
     }, b.label)))));
   })(), userType === "student" && (() => {
