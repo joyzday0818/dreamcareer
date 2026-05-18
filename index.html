@@ -2774,8 +2774,8 @@ function App() {
     }, "\uD83C\uDFC5 \uB2EC\uC131 \uBC30\uC9C0 ", earnedBadges.length, "/", BADGES_DEF.length), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "grid",
-        gridTemplateColumns: "repeat(10,1fr)",
-        gap: 3
+        gridTemplateColumns: "repeat(5,1fr)",
+        gap: 6
       }
     }, BADGES_DEF.map((b, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
@@ -2783,29 +2783,28 @@ function App() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 2,
+        gap: 3,
         opacity: b.ok ? 1 : 0.25
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        width: 28,
-        height: 28,
-        borderRadius: 9,
+        width: 40,
+        height: 40,
+        borderRadius: 12,
         background: b.ok ? `${C.gold}25` : C.g100,
-        border: `1.5px solid ${b.ok ? C.gold : C.g200}`,
+        border: `2px solid ${b.ok ? C.gold : C.g200}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 14
+        fontSize: 20
       }
     }, b.emoji), /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 6.5,
+        fontSize: 8.5,
         color: b.ok ? C.gold : C.g400,
         fontWeight: 700,
         textAlign: "center",
-        lineHeight: 1.1,
-        wordBreak: "keep-all"
+        lineHeight: 1.2
       }
     }, b.label))))), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -4445,8 +4444,8 @@ function App() {
     }, "\uD83C\uDFC5 \uB2EC\uC131\uD55C \uBC30\uC9C0 ", earned.length, "/", BADGES.length), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "grid",
-        gridTemplateColumns: "repeat(10,1fr)",
-        gap: 4
+        gridTemplateColumns: "repeat(5,1fr)",
+        gap: 8
       }
     }, BADGES.map((b, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
@@ -4454,29 +4453,28 @@ function App() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 2,
+        gap: 4,
         opacity: b.ok ? 1 : 0.28
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        width: 32,
-        height: 32,
-        borderRadius: 10,
+        width: 44,
+        height: 44,
+        borderRadius: 13,
         background: b.ok ? `${C.gold}22` : C.g100,
-        border: `1.5px solid ${b.ok ? C.gold : C.g200}`,
+        border: `2px solid ${b.ok ? C.gold : C.g200}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 16
+        fontSize: 22
       }
     }, b.emoji), /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: 7,
+        fontSize: 9,
         color: b.ok ? C.gold : C.g400,
         fontWeight: 700,
         textAlign: "center",
-        lineHeight: 1.1,
-        wordBreak: "keep-all"
+        lineHeight: 1.2
       }
     }, b.label)))));
   })(), userType === "student" && (() => {
