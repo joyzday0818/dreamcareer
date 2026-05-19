@@ -320,6 +320,34 @@ function Toast({
     }
   }, msg) : null;
 }
+
+// 영상 썸네일: 첫 프레임 자동 캡처
+function VideoThumb({
+  src,
+  style
+}) {
+  const r = useRef(null);
+  useEffect(() => {
+    const v = r.current;
+    if (!v) return;
+    const onMeta = () => {
+      try {
+        v.currentTime = 0.1;
+      } catch (e) {}
+    };
+    v.addEventListener('loadedmetadata', onMeta);
+    if (v.readyState >= 1) onMeta();
+    return () => v.removeEventListener('loadedmetadata', onMeta);
+  }, [src]);
+  return /*#__PURE__*/React.createElement("video", {
+    ref: r,
+    src: src,
+    preload: "metadata",
+    muted: true,
+    playsInline: true,
+    style: style
+  });
+}
 function Lightbox({
   items,
   initialIndex,
@@ -1489,6 +1517,53 @@ function App() {
       });
     }
   };
+  const handleCommentDelete = async (postId, commentIdx) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    const newList = (post.commentList || []).filter((_, i) => i !== commentIdx);
+    const upd = p => p.id === postId ? {
+      ...p,
+      commentList: newList
+    } : p;
+    setPosts(prev => prev.map(upd));
+    setCommentModal(prev => prev && prev.id === postId ? {
+      ...prev,
+      commentList: newList
+    } : prev);
+    if (postDetail?.id === postId) setPostDetail(d => ({
+      ...d,
+      commentList: newList
+    }));
+    await FB.update(`posts/${postId}`, {
+      commentList: newList
+    });
+    toast("🗑️ 댓글이 삭제됐어요.");
+  };
+  const handleCommentEdit = async (postId, commentIdx, newText) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    const newList = (post.commentList || []).map((c, i) => i === commentIdx ? {
+      ...c,
+      text: newText,
+      edited: true
+    } : c);
+    const upd = p => p.id === postId ? {
+      ...p,
+      commentList: newList
+    } : p;
+    setPosts(prev => prev.map(upd));
+    setCommentModal(prev => prev && prev.id === postId ? {
+      ...prev,
+      commentList: newList
+    } : prev);
+    if (postDetail?.id === postId) setPostDetail(d => ({
+      ...d,
+      commentList: newList
+    }));
+    await FB.update(`posts/${postId}`, {
+      commentList: newList
+    });
+  };
   const handleLoveSend = p => {
     setLoved(v => ({
       ...v,
@@ -2647,7 +2722,7 @@ function App() {
       const w = window.open("", "_blank", "width=600,height=900");
       w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${s.name} 포트폴리오</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans KR',sans-serif;padding:24px;max-width:480px;margin:0 auto;color:#1A1F36}h2{color:#1A1F36;margin:0 0 4px}section{margin-bottom:20px;padding:16px;border:1px solid #E8E8E4;border-radius:14px}h3{font-size:14px;font-weight:700;color:#1A1F36;margin:0 0 10px}@media print{.no-print{display:none}}</style></head><body>
       <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #FF6B3533">
-        <div style="font-size:28px;margin-bottom:8px">${s.avatar || "👤"}</div>
+        ${s.profilePic ? `<img src="${s.profilePic}" style="width:72px;height:72px;object-fit:cover;border-radius:50%;margin:0 auto 10px;display:block;border:3px solid #FF6B3533" alt=""/>` : `<div style="font-size:42px;margin-bottom:10px">${s.avatar || "👤"}</div>`}
         <h2>${s.name}</h2><p style="color:#9A9A94;margin:0;font-size:13px">${s.school || ""}</p>
         <div style="display:flex;justify-content:center;gap:20px;margin-top:12px">
           <div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#FF6B35">${studentPosts.length}</div><div style="font-size:11px;color:#9A9A94">게시물</div></div>
@@ -2983,7 +3058,7 @@ function App() {
         animation: `fadeUp 0.3s ${Math.min(i, 8) * 0.03}s ease forwards`,
         opacity: 0
       }
-    }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("video", {
+    }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(VideoThumb, {
       src: item.url,
       style: {
         width: "100%",
@@ -3104,7 +3179,10 @@ function App() {
       post: commentModal,
       currentUser: currentUser,
       onClose: () => setCommentModal(null),
-      onSubmit: handleCommentSubmit
+      onSubmit: handleCommentSubmit,
+      onDelete: handleCommentDelete,
+      onEdit: handleCommentEdit,
+      isAdmin: isAdmin
     }), lightbox && /*#__PURE__*/React.createElement(Lightbox, {
       items: lightbox.items,
       initialIndex: lightbox.index,
@@ -3705,7 +3783,7 @@ function App() {
       overflow: "hidden",
       position: "relative"
     }
-  }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement("video", {
+  }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement(VideoThumb, {
     src: item.url,
     style: {
       width: "100%",
@@ -5052,7 +5130,7 @@ function App() {
           animation: `fadeUp 0.3s ${Math.min(i, 8) * 0.04}s ease forwards`,
           opacity: 0
         }
-      }, fm ? fm.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("video", {
+      }, fm ? fm.type?.startsWith("video") ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(VideoThumb, {
         src: fm.url,
         style: {
           width: "100%",
@@ -5443,7 +5521,10 @@ function App() {
     post: commentModal,
     currentUser: currentUser,
     onClose: () => setCommentModal(null),
-    onSubmit: handleCommentSubmit
+    onSubmit: handleCommentSubmit,
+    onDelete: handleCommentDelete,
+    onEdit: handleCommentEdit,
+    isAdmin: isAdmin
   }), manageModal && /*#__PURE__*/React.createElement(ManageModal, {
     post: manageModal,
     onClose: () => setManageModal(null),
@@ -6256,7 +6337,12 @@ function EditModal({
       color: C.g600,
       marginBottom: 9
     }
-  }, "\uD83D\uDCF7 \uC0AC\uC9C4/\uC601\uC0C1 (", editMedia.length, "\uAC1C)"), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDCF7 \uC0AC\uC9C4/\uC601\uC0C1 (", editMedia.length, "\uAC1C) ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 400,
+      color: C.g400
+    }
+  }, "\xB7 \u2039 \u203A \uB85C \uC21C\uC11C \uBCC0\uACBD")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: "repeat(3,1fr)",
@@ -6270,7 +6356,7 @@ function EditModal({
       overflow: "hidden",
       position: "relative"
     }
-  }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement("video", {
+  }, item.type?.startsWith("video") ? /*#__PURE__*/React.createElement(VideoThumb, {
     src: item.url,
     style: {
       width: "100%",
@@ -6292,20 +6378,74 @@ function EditModal({
       position: "absolute",
       top: 4,
       right: 4,
-      width: 22,
-      height: 22,
-      borderRadius: 7,
+      width: 20,
+      height: 20,
+      borderRadius: 6,
       background: "rgba(0,0,0,0.65)",
       color: "#fff",
       border: "none",
-      fontSize: 12,
+      fontSize: 10,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: 0,
       cursor: "pointer"
     }
-  }, "\u2715"))))), /*#__PURE__*/React.createElement("div", {
+  }, "\u2715"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      bottom: 3,
+      left: 0,
+      right: 0,
+      display: "flex",
+      justifyContent: "center",
+      gap: 3
+    }
+  }, i > 0 && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setEditMedia(p => {
+      const a = [...p];
+      const tmp = a[i];
+      a[i] = a[i - 1];
+      a[i - 1] = tmp;
+      return a;
+    }),
+    style: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      background: "rgba(0,0,0,0.6)",
+      color: "#fff",
+      border: "none",
+      fontSize: 13,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 0
+    }
+  }, "\u2039"), i < editMedia.length - 1 && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setEditMedia(p => {
+      const a = [...p];
+      const tmp = a[i];
+      a[i] = a[i + 1];
+      a[i + 1] = tmp;
+      return a;
+    }),
+    style: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      background: "rgba(0,0,0,0.6)",
+      color: "#fff",
+      border: "none",
+      fontSize: 13,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 0
+    }
+  }, "\u203A")))))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: C.g100,
       borderRadius: 16,
@@ -6498,9 +6638,14 @@ function CommentModal({
   post,
   currentUser,
   onClose,
-  onSubmit
+  onSubmit,
+  onDelete,
+  onEdit,
+  isAdmin
 }) {
   const [text, setText] = useState("");
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editText, setEditText] = useState("");
   const m = JOB_META[post.tag] || {
     color: "#FF6B35"
   };
@@ -6511,12 +6656,14 @@ function CommentModal({
       author: currentUser?.name || "익명",
       avatar: currentUser?.avatar || "👤",
       pic: currentUser?.pic || null,
+      userId: currentUser?.id || null,
       text: text.trim(),
       time: "방금 전",
       createdAt: Date.now()
     });
     setText("");
   };
+  const canModify = c => isAdmin || c.userId && c.userId === currentUser?.id;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
@@ -6637,7 +6784,14 @@ function CommentModal({
     style: {
       display: "flex",
       justifyContent: "space-between",
-      marginBottom: 3
+      marginBottom: 3,
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -6645,12 +6799,99 @@ function CommentModal({
       fontWeight: 700,
       color: C.navy
     }
-  }, c.author), /*#__PURE__*/React.createElement("span", {
+  }, c.author), c.edited && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: C.g400
+    }
+  }, "(\uC218\uC815\uB428)")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 10,
       color: C.g400
     }
-  }, c.createdAt ? timeAgo(c.createdAt) : c.time)), /*#__PURE__*/React.createElement("div", {
+  }, c.createdAt ? timeAgo(c.createdAt) : c.time), canModify(c) && editingIdx !== i && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setEditingIdx(i);
+      setEditText(c.text);
+    },
+    style: {
+      background: "none",
+      border: "none",
+      fontSize: 12,
+      color: C.g400,
+      padding: "0 1px",
+      cursor: "pointer"
+    }
+  }, "\u270F\uFE0F"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => onDelete && onDelete(post.id, i),
+    style: {
+      background: "none",
+      border: "none",
+      fontSize: 12,
+      color: "#E53935",
+      padding: "0 1px",
+      cursor: "pointer"
+    }
+  }, "\uD83D\uDDD1\uFE0F")))), editingIdx === i ? /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("textarea", {
+    value: editText,
+    onChange: e => setEditText(e.target.value),
+    rows: 2,
+    style: {
+      width: "100%",
+      border: `1.5px solid ${C.primary}`,
+      borderRadius: 8,
+      padding: "6px 8px",
+      fontSize: 13,
+      color: C.navy,
+      resize: "none",
+      outline: "none",
+      background: "#fff",
+      lineHeight: 1.5
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      marginTop: 5
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      onEdit && onEdit(post.id, i, editText.trim());
+      setEditingIdx(null);
+    },
+    style: {
+      flex: 1,
+      padding: "7px",
+      borderRadius: 8,
+      border: "none",
+      background: C.primary,
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: 700
+    }
+  }, "\uC800\uC7A5"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setEditingIdx(null),
+    style: {
+      flex: 1,
+      padding: "7px",
+      borderRadius: 8,
+      border: `1px solid ${C.g200}`,
+      background: "#fff",
+      color: C.g600,
+      fontSize: 12
+    }
+  }, "\uCDE8\uC18C"))) : /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: C.g600,
