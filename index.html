@@ -950,6 +950,8 @@ function App() {
   const [sentLovecalls, setSentLovecalls] = useState([]);
   const [companyFormVisible, setCompanyFormVisible] = useState(false);
   const [companyFormName, setCompanyFormName] = useState("");
+  const [teacherFormVisible, setTeacherFormVisible] = useState(false);
+  const [teacherName, setTeacherName] = useState("");
   const [mediaList, setMediaList] = useState([]);
   const [desc, setDesc] = useState("");
   const [selfPraise, setSelfPraise] = useState("");
@@ -2106,138 +2108,134 @@ function App() {
       color: C.g400,
       fontSize: 18
     }
-  }, "\u203A")), (() => {
-    const [teacherFormVisible, setTeacherFormVisible] = useState(false);
-    const [teacherName, setTeacherName] = useState("");
-    return !teacherFormVisible ? /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => setTeacherFormVisible(true),
-      style: {
-        width: "100%",
-        background: C.white,
-        borderRadius: 18,
-        padding: "15px 18px",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-        border: `2px solid #1565C022`,
-        marginBottom: 10
+  }, "\u203A")), !teacherFormVisible ? /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setTeacherFormVisible(true),
+    style: {
+      width: "100%",
+      background: C.white,
+      borderRadius: 18,
+      padding: "15px 18px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+      display: "flex",
+      alignItems: "center",
+      gap: 14,
+      border: "2px solid #1565C022",
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 22
+    }
+  }, "\uD83D\uDC69\u200D\uD83C\uDFEB"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      textAlign: "left"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, "\uAD50\uC0AC / \uBCF4\uD638\uC790\uB85C \uC2DC\uC791\uD558\uAE30"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.g400
+    }
+  }, "\uD559\uC0DD \uC804\uCCB4 \uD604\uD669 \uB300\uC2DC\uBCF4\uB4DC\uB97C \uD655\uC778\uD574\uC694")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: C.g400,
+      fontSize: 18
+    }
+  }, "\u203A")) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 18,
+      padding: "18px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+      border: "2px solid #1565C033",
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 20
+    }
+  }, "\uD83D\uDC69\u200D\uD83C\uDFEB"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, "\uAD50\uC0AC / \uBCF4\uD638\uC790 \uC785\uC7A5")), /*#__PURE__*/React.createElement("input", {
+    placeholder: "\u270F\uFE0F \uC774\uB984  \uC608) \uC804\uC608\uC6D0 \uC120\uC0DD\uB2D8",
+    value: teacherName,
+    onChange: e => setTeacherName(e.target.value),
+    style: {
+      width: "100%",
+      border: `1.5px solid ${teacherName ? "#1565C0" : C.g200}`,
+      borderRadius: 12,
+      padding: "11px 13px",
+      fontSize: 14,
+      color: C.navy,
+      outline: "none",
+      marginBottom: 10,
+      background: C.g100
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      if (!teacherName.trim()) {
+        toast("✏️ 이름을 입력해주세요!");
+        return;
       }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 22
-      }
-    }, "\uD83D\uDC69\u200D\uD83C\uDFEB"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1,
-        textAlign: "left"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 14,
-        fontWeight: 700,
-        color: C.navy
-      }
-    }, "\uAD50\uC0AC / \uBCF4\uD638\uC790\uB85C \uC2DC\uC791\uD558\uAE30"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 12,
-        color: C.g400
-      }
-    }, "\uD559\uC0DD \uC804\uCCB4 \uD604\uD669 \uB300\uC2DC\uBCF4\uB4DC\uB97C \uD655\uC778\uD574\uC694")), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: C.g400,
-        fontSize: 18
-      }
-    }, "\u203A")) : /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: C.white,
-        borderRadius: 18,
-        padding: "18px",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-        border: "2px solid #1565C033",
-        marginBottom: 10
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 14
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 20
-      }
-    }, "\uD83D\uDC69\u200D\uD83C\uDFEB"), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 15,
-        fontWeight: 700,
-        color: C.navy
-      }
-    }, "\uAD50\uC0AC / \uBCF4\uD638\uC790 \uC785\uC7A5")), /*#__PURE__*/React.createElement("input", {
-      placeholder: "\u270F\uFE0F \uC774\uB984  \uC608) \uC804\uC608\uC6D0 \uC120\uC0DD\uB2D8",
-      value: teacherName,
-      onChange: e => setTeacherName(e.target.value),
-      style: {
-        width: "100%",
-        border: `1.5px solid ${teacherName ? "#1565C0" : C.g200}`,
-        borderRadius: 12,
-        padding: "11px 13px",
-        fontSize: 14,
-        color: C.navy,
-        outline: "none",
-        marginBottom: 10,
-        background: C.g100
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 8
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => {
-        if (!teacherName.trim()) {
-          toast("✏️ 이름을 입력해주세요!");
-          return;
-        }
-        const u = {
-          id: "tc" + Date.now(),
-          name: teacherName.trim(),
-          role: "teacher"
-        };
-        setCurrentUser(u);
-        setUserType("teacher");
-        setScreen("main");
-        toast(`👩‍🏫 환영해요, ${u.name}님!`);
-      },
-      style: {
-        flex: 1,
-        padding: "12px",
-        borderRadius: 12,
-        border: "none",
-        background: "linear-gradient(135deg,#1565C0,#42A5F5)",
-        color: "#fff",
-        fontSize: 14,
-        fontWeight: 900
-      }
-    }, "\uC785\uC7A5\uD558\uAE30 \u2192"), /*#__PURE__*/React.createElement("button", {
-      className: "btn",
-      onClick: () => {
-        setTeacherFormVisible(false);
-        setTeacherName("");
-      },
-      style: {
-        padding: "12px 14px",
-        borderRadius: 12,
-        border: `1px solid ${C.g200}`,
-        background: C.white,
-        color: C.g600,
-        fontSize: 13
-      }
-    }, "\uCDE8\uC18C")));
-  })(), /*#__PURE__*/React.createElement("button", {
+      const u = {
+        id: "tc" + Date.now(),
+        name: teacherName.trim(),
+        role: "teacher"
+      };
+      setCurrentUser(u);
+      setUserType("teacher");
+      setScreen("main");
+      toast(`👩‍🏫 환영해요, ${u.name}님!`);
+    },
+    style: {
+      flex: 1,
+      padding: "12px",
+      borderRadius: 12,
+      border: "none",
+      background: "linear-gradient(135deg,#1565C0,#42A5F5)",
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: 900
+    }
+  }, "\uC785\uC7A5\uD558\uAE30 \u2192"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setTeacherFormVisible(false);
+      setTeacherName("");
+    },
+    style: {
+      padding: "12px 14px",
+      borderRadius: 12,
+      border: `1px solid ${C.g200}`,
+      background: C.white,
+      color: C.g600,
+      fontSize: 13
+    }
+  }, "\uCDE8\uC18C"))), !companyFormVisible ? /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => setCompanyFormVisible(true),
     style: {
@@ -2276,7 +2274,7 @@ function App() {
       color: C.g400,
       fontSize: 18
     }
-  }, "\u203A")), "):(", /*#__PURE__*/React.createElement("div", {
+  }, "\u203A")) : /*#__PURE__*/React.createElement("div", {
     style: {
       background: C.white,
       borderRadius: 18,
@@ -2362,7 +2360,7 @@ function App() {
       color: C.g600,
       fontSize: 13
     }
-  }, "\uCDE8\uC18C"))), ")}"));
+  }, "\uCDE8\uC18C")))));
 
   // ── 게시물 상세 화면 ──
   if (postDetail) {
