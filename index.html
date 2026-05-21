@@ -966,10 +966,19 @@ function App() {
   const feedRef = useRef(null);
   const [filterTag, setFilterTag] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchView, setSearchView] = useState("search"); // "search" | "dashboard"
   const [showPortfolio, setShowPortfolio] = useState(false);
-  const [portfolioView, setPortfolioView] = useState("grid"); // 기본값 사진
+  const [portfolioView, setPortfolioView] = useState("grid");
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [showUserMgmt, setShowUserMgmt] = useState(false);
+
+  // useEffect보다 먼저 정의해야 TDZ 오류 없음
+  const isAdmin = !!(currentUser?.name?.trim().includes("전예원") && userType === "student");
+  const isTeacher = userType === "teacher";
+  const isGuest = userType === "guest";
+  const isDashboardUser = isTeacher || userType === "company" || isAdmin;
   // ✅ 변경1: 자기소개서 상태
   const [showResume, setShowResume] = useState(false);
   const [resumeText, setResumeText] = useState("");
@@ -1235,6 +1244,14 @@ function App() {
       if (data) setSentLovecalls(Object.values(data).sort((a, b) => b.sentAt - a.sentAt));
     });
   }, [currentUser, userType]);
+
+  // 관리자 - 전체 회원 목록 로드
+  useEffect(() => {
+    if (activeTab !== 'profile' || !isAdmin) return;
+    FB.get("users").then(data => {
+      if (data) setAllUsers(Object.values(data).sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+    });
+  }, [activeTab, isAdmin]);
 
   // ✅ 자기소개서 로드 (내 정보) - 먼저 초기화 후 로드
   useEffect(() => {
@@ -1607,7 +1624,8 @@ function App() {
       setSentLovecalls(prev => [sentData, ...prev]);
     }
   };
-  const isAdmin = !!(currentUser?.name?.trim().includes("전예원") && userType === "student");
+
+  // isAdmin, isTeacher, isDashboardUser는 상단에서 정의됨
   const allNotifications = [...lovecalls.map(n => ({
     ...n,
     _type: 'lovecall',
@@ -3318,9 +3336,8 @@ function App() {
       onClose: () => setLightbox(null)
     }));
   }
-  const isGuest = userType === "guest";
-  const isTeacher = userType === "teacher";
-  const isDashboardUser = isTeacher || userType === "company" || isAdmin;
+
+  // isGuest, isTeacher, isDashboardUser는 상단에서 정의됨
   const tabs = [{
     id: "feed",
     icon: "🏠",
@@ -3337,10 +3354,6 @@ function App() {
     id: "notify",
     icon: "🔔",
     label: "알림"
-  }] : []), ...(isDashboardUser ? [{
-    id: "dashboard",
-    icon: "📊",
-    label: "현황"
   }] : []), ...(!isGuest && !isTeacher ? [{
     id: "profile",
     icon: isAdmin ? "🔧" : "👤",
@@ -3711,7 +3724,332 @@ function App() {
         padding: "14px",
         paddingBottom: 100
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, isDashboardUser && /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        background: C.g100,
+        borderRadius: 14,
+        padding: 4,
+        marginBottom: 14,
+        gap: 4
+      }
+    }, [["search", "🔍 직무 탐색"], ["dashboard", "📊 학생 현황"]].map(([v, l]) => /*#__PURE__*/React.createElement("button", {
+      key: v,
+      className: "btn",
+      onClick: () => setSearchView(v),
+      style: {
+        flex: 1,
+        padding: "9px 4px",
+        borderRadius: 11,
+        border: "none",
+        background: searchView === v ? C.white : "transparent",
+        color: searchView === v ? C.navy : C.g400,
+        fontWeight: searchView === v ? 700 : 400,
+        fontSize: 13,
+        boxShadow: searchView === v ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+        transition: "all .18s"
+      }
+    }, l))), searchView === "dashboard" && isDashboardUser && (() => {
+      const studentMap = {};
+      posts.filter(p => !["d1", "d2", "d3"].includes(p.id) && p.userId).forEach(p => {
+        if (!studentMap[p.userId]) studentMap[p.userId] = {
+          userId: p.userId,
+          name: p.name,
+          school: p.school,
+          avatar: p.avatar,
+          profilePic: p.profilePic,
+          posts: [],
+          totalLikes: 0,
+          totalComments: 0
+        };
+        studentMap[p.userId].posts.push(p);
+        studentMap[p.userId].totalLikes += p.likes || 0;
+        studentMap[p.userId].totalComments += (p.commentList || []).length;
+      });
+      const students = Object.values(studentMap).sort((a, b) => b.posts.length - a.posts.length);
+      const totalPosts = posts.filter(p => !["d1", "d2", "d3"].includes(p.id)).length;
+      const totalLikesAll = students.reduce((s, st) => s + st.totalLikes, 0);
+      return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 8,
+          marginBottom: 14
+        }
+      }, [["👥", "등록 학생", `${students.length}명`, "#1565C0"], ["📋", "총 게시물", `${totalPosts}개`, C.primary], ["💛", "총 응원", `${totalLikesAll}개`, C.gold]].map(([ic, lb, vl, cl]) => /*#__PURE__*/React.createElement("div", {
+        key: lb,
+        style: {
+          background: C.white,
+          borderRadius: 14,
+          padding: "12px 8px",
+          textAlign: "center",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 20,
+          marginBottom: 4
+        }
+      }, ic), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 16,
+          fontWeight: 900,
+          color: cl
+        }
+      }, vl), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 10,
+          color: C.g400,
+          marginTop: 2
+        }
+      }, lb)))), students.length === 0 ? /*#__PURE__*/React.createElement("div", {
+        style: {
+          textAlign: "center",
+          padding: "40px 0",
+          color: C.g400
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 36,
+          marginBottom: 8
+        }
+      }, "\uD83D\uDCED"), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 13
+        }
+      }, "\uC544\uC9C1 \uAC8C\uC2DC\uBB3C\uC774 \uC5C6\uC5B4\uC694")) : students.map((st, i) => {
+        const avgProgress = st.posts.length ? Math.round(st.posts.reduce((s, p) => s + (p.progress || 0), 0) / st.posts.length) : 0;
+        const avgTeacher = st.posts.filter(p => p.teacherScore != null).length ? Math.round(st.posts.filter(p => p.teacherScore != null).reduce((s, p) => s + (p.teacherScore || 0), 0) / st.posts.filter(p => p.teacherScore != null).length) : null;
+        const tags = [...new Set(st.posts.map(p => p.tag).filter(Boolean))];
+        const badges = calcBadges(st.posts, {}).filter(b => b.ok);
+        const latestMedia = st.posts.flatMap(p => p.mediaList || []).filter(m => !m.type?.startsWith("video")).slice(0, 3);
+        return /*#__PURE__*/React.createElement("div", {
+          key: st.userId,
+          className: "card",
+          style: {
+            background: C.white,
+            borderRadius: 18,
+            padding: "14px",
+            marginBottom: 10,
+            boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+            animation: `fadeUp 0.35s ${Math.min(i, 5) * 0.06}s ease forwards`,
+            opacity: 0
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            marginBottom: 10
+          }
+        }, /*#__PURE__*/React.createElement("button", {
+          className: "btn",
+          onClick: () => {
+            const p = st.posts[0];
+            if (p) openDetail(p);
+          },
+          style: {
+            background: "none",
+            border: "none",
+            padding: 0
+          }
+        }, /*#__PURE__*/React.createElement(Av, {
+          src: st.profilePic,
+          emoji: st.avatar,
+          size: 46,
+          radius: 14,
+          color: C.primary
+        })), /*#__PURE__*/React.createElement("div", {
+          style: {
+            flex: 1,
+            minWidth: 0
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            fontSize: 14,
+            fontWeight: 700,
+            color: C.navy
+          }
+        }, st.name), /*#__PURE__*/React.createElement("div", {
+          style: {
+            fontSize: 11,
+            color: C.g400
+          }
+        }, st.school), /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            gap: 4,
+            flexWrap: "wrap",
+            marginTop: 3
+          }
+        }, tags.map(t => {
+          const m = JOB_META[t] || {
+            color: C.primary,
+            emoji: "✨"
+          };
+          return /*#__PURE__*/React.createElement("span", {
+            key: t,
+            style: {
+              background: `${m.color}18`,
+              color: m.color,
+              borderRadius: 8,
+              padding: "2px 6px",
+              fontSize: 9,
+              fontWeight: 700
+            }
+          }, m.emoji, " ", t.replace("#", ""));
+        }))), /*#__PURE__*/React.createElement("button", {
+          className: "btn",
+          onClick: () => {
+            const p = st.posts[0];
+            if (p) openDetail(p);
+          },
+          style: {
+            background: `${C.primary}10`,
+            border: "none",
+            borderRadius: 10,
+            padding: "5px 9px",
+            fontSize: 11,
+            fontWeight: 700,
+            color: C.primary,
+            flexShrink: 0
+          }
+        }, "\uD504\uB85C\uD544 \u2192")), /*#__PURE__*/React.createElement("div", {
+          style: {
+            marginBottom: 8
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 3
+          }
+        }, /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: 10,
+            color: C.g400
+          }
+        }, "\uD83E\uDDD1\u200D\uD83C\uDF93 \uC790\uAE30\uD3C9\uAC00 \uD3C9\uADE0"), /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: 10,
+            fontWeight: 700,
+            color: C.primary
+          }
+        }, avgProgress, "\uC810")), /*#__PURE__*/React.createElement("div", {
+          style: {
+            height: 5,
+            background: C.g100,
+            borderRadius: 3,
+            overflow: "hidden",
+            marginBottom: avgTeacher != null ? 4 : 0
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            height: "100%",
+            width: `${avgProgress}%`,
+            background: C.primary,
+            borderRadius: 3
+          }
+        })), avgTeacher != null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 3
+          }
+        }, /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: 10,
+            color: "#2D6A4F"
+          }
+        }, "\uD83D\uDC69\u200D\uD83C\uDFEB \uAD50\uC0AC\uD3C9\uAC00 \uD3C9\uADE0"), /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: 10,
+            fontWeight: 700,
+            color: "#2D6A4F"
+          }
+        }, avgTeacher, "\uC810")), /*#__PURE__*/React.createElement("div", {
+          style: {
+            height: 5,
+            background: C.g100,
+            borderRadius: 3,
+            overflow: "hidden"
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            height: "100%",
+            width: `${avgTeacher}%`,
+            background: "#2D6A4F",
+            borderRadius: 3
+          }
+        })))), /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            gap: 12
+          }
+        }, [["📋", st.posts.length, "게시물"], ["💛", st.totalLikes, "응원"], ["💬", st.totalComments, "댓글"]].map(([ic, v, lb]) => /*#__PURE__*/React.createElement("div", {
+          key: lb,
+          style: {
+            textAlign: "center"
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            fontSize: 12,
+            fontWeight: 700,
+            color: C.navy
+          }
+        }, v), /*#__PURE__*/React.createElement("div", {
+          style: {
+            fontSize: 9,
+            color: C.g400
+          }
+        }, lb)))), badges.length > 0 && /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            gap: 3
+          }
+        }, badges.slice(0, 5).map((b, j) => /*#__PURE__*/React.createElement("span", {
+          key: j,
+          style: {
+            fontSize: 13
+          }
+        }, b.emoji)), badges.length > 5 && /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: 9,
+            color: C.g400,
+            alignSelf: "center"
+          }
+        }, "+", badges.length - 5))), latestMedia.length > 0 && /*#__PURE__*/React.createElement("div", {
+          style: {
+            display: "flex",
+            gap: 4,
+            marginTop: 8
+          }
+        }, latestMedia.map((m, j) => /*#__PURE__*/React.createElement("div", {
+          key: j,
+          style: {
+            width: 52,
+            height: 52,
+            borderRadius: 9,
+            overflow: "hidden",
+            flexShrink: 0
+          }
+        }, /*#__PURE__*/React.createElement("img", {
+          src: m.url,
+          style: {
+            width: "100%",
+            height: "100%",
+            objectFit: "cover"
+          },
+          alt: ""
+        })))));
+      }));
+    })(), /*#__PURE__*/React.createElement("div", {
       style: {
         background: C.white,
         borderRadius: 16,
@@ -4567,322 +4905,7 @@ function App() {
       color: C.g400,
       marginTop: 2
     }
-  }, "\uB7EC\uBE0C\uCF5C\uC744 \uBCF4\uB0BC \uC218 \uC788\uC5B4\uC694")))), activeTab === "dashboard" && (() => {
-    // 모든 학생 데이터 집계
-    const studentMap = {};
-    posts.filter(p => p.userId && !["d1", "d2", "d3"].includes(p.id)).forEach(p => {
-      if (!studentMap[p.userId]) {
-        studentMap[p.userId] = {
-          userId: p.userId,
-          name: p.name,
-          school: p.school,
-          avatar: p.avatar,
-          profilePic: p.profilePic,
-          posts: [],
-          totalLikes: 0,
-          totalComments: 0
-        };
-      }
-      studentMap[p.userId].posts.push(p);
-      studentMap[p.userId].totalLikes += p.likes || 0;
-      studentMap[p.userId].totalComments += (p.commentList || []).length;
-    });
-    const students = Object.values(studentMap).sort((a, b) => b.posts.length - a.posts.length);
-    const totalPosts = posts.filter(p => !["d1", "d2", "d3"].includes(p.id)).length;
-    const totalLikesAll = students.reduce((s, st) => s + st.totalLikes, 0);
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: "14px",
-        paddingBottom: 100
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 17,
-        fontWeight: 900,
-        color: C.navy,
-        marginBottom: 12
-      }
-    }, "\uD83D\uDCCA \uD559\uC0DD \uD604\uD669 \uB300\uC2DC\uBCF4\uB4DC"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gap: 8,
-        marginBottom: 16
-      }
-    }, [["👥", "등록 학생", `${students.length}명`, "#1565C0"], ["📋", "총 게시물", `${totalPosts}개`, C.primary], ["💛", "총 응원", `${totalLikesAll}개`, C.gold]].map(([ic, lb, vl, cl]) => /*#__PURE__*/React.createElement("div", {
-      key: lb,
-      style: {
-        background: C.white,
-        borderRadius: 14,
-        padding: "12px 8px",
-        textAlign: "center",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 20,
-        marginBottom: 4
-      }
-    }, ic), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 16,
-        fontWeight: 900,
-        color: cl
-      }
-    }, vl), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        color: C.g400,
-        marginTop: 2
-      }
-    }, lb)))), students.length === 0 ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: "center",
-        padding: "52px 20px",
-        color: C.g400
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 40,
-        marginBottom: 12
-      }
-    }, "\uD83D\uDCED"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 14,
-        fontWeight: 600
-      }
-    }, "\uC544\uC9C1 \uAC8C\uC2DC\uBB3C\uC774 \uC5C6\uC5B4\uC694")) : students.map((st, i) => {
-      const avgProgress = st.posts.length ? Math.round(st.posts.reduce((s, p) => s + (p.progress || 0), 0) / st.posts.length) : 0;
-      const avgTeacher = st.posts.filter(p => p.teacherScore != null).length ? Math.round(st.posts.filter(p => p.teacherScore != null).reduce((s, p) => s + (p.teacherScore || 0), 0) / st.posts.filter(p => p.teacherScore != null).length) : null;
-      const tags = [...new Set(st.posts.map(p => p.tag).filter(Boolean))];
-      const badges = calcBadges(st.posts, {}).filter(b => b.ok);
-      const latestMedia = st.posts.flatMap(p => p.mediaList || []).filter(m => !m.type?.startsWith("video")).slice(0, 3);
-      return /*#__PURE__*/React.createElement("div", {
-        key: st.userId,
-        className: "card",
-        style: {
-          background: C.white,
-          borderRadius: 18,
-          padding: "14px",
-          marginBottom: 10,
-          boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-          animation: `fadeUp 0.35s ${Math.min(i, 5) * 0.06}s ease forwards`,
-          opacity: 0
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          gap: 12,
-          alignItems: "center",
-          marginBottom: 12
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        className: "btn",
-        onClick: () => {
-          const p = st.posts[0];
-          if (p) openDetail(p);
-        },
-        style: {
-          background: "none",
-          border: "none",
-          padding: 0
-        }
-      }, /*#__PURE__*/React.createElement(Av, {
-        src: st.profilePic,
-        emoji: st.avatar,
-        size: 48,
-        radius: 15,
-        color: C.primary
-      })), /*#__PURE__*/React.createElement("div", {
-        style: {
-          flex: 1,
-          minWidth: 0
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 15,
-          fontWeight: 700,
-          color: C.navy
-        }
-      }, st.name), /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 11,
-          color: C.g400
-        }
-      }, st.school), /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          gap: 4,
-          flexWrap: "wrap",
-          marginTop: 4
-        }
-      }, tags.map(t => {
-        const m = JOB_META[t] || {
-          color: C.primary,
-          emoji: "✨"
-        };
-        return /*#__PURE__*/React.createElement("span", {
-          key: t,
-          style: {
-            background: `${m.color}18`,
-            color: m.color,
-            borderRadius: 8,
-            padding: "2px 7px",
-            fontSize: 10,
-            fontWeight: 700
-          }
-        }, m.emoji, " ", t.replace("#", ""));
-      }))), /*#__PURE__*/React.createElement("button", {
-        className: "btn",
-        onClick: () => {
-          const p = st.posts[0];
-          if (p) openDetail(p);
-        },
-        style: {
-          background: `${C.primary}10`,
-          border: "none",
-          borderRadius: 10,
-          padding: "6px 10px",
-          fontSize: 11,
-          fontWeight: 700,
-          color: C.primary
-        }
-      }, "\uD504\uB85C\uD544 \u2192")), /*#__PURE__*/React.createElement("div", {
-        style: {
-          marginBottom: 10
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 3
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          color: C.g400
-        }
-      }, "\uD83E\uDDD1\u200D\uD83C\uDF93 \uC790\uAE30\uD3C9\uAC00 \uD3C9\uADE0"), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          fontWeight: 700,
-          color: C.primary
-        }
-      }, avgProgress, "\uC810")), /*#__PURE__*/React.createElement("div", {
-        style: {
-          height: 6,
-          background: C.g100,
-          borderRadius: 3,
-          overflow: "hidden",
-          marginBottom: avgTeacher != null ? 4 : 0
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          height: "100%",
-          width: `${avgProgress}%`,
-          background: C.primary,
-          borderRadius: 3
-        }
-      })), avgTeacher != null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 3
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          color: "#2D6A4F"
-        }
-      }, "\uD83D\uDC69\u200D\uD83C\uDFEB \uAD50\uC0AC\uD3C9\uAC00 \uD3C9\uADE0"), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          fontWeight: 700,
-          color: "#2D6A4F"
-        }
-      }, avgTeacher, "\uC810")), /*#__PURE__*/React.createElement("div", {
-        style: {
-          height: 6,
-          background: C.g100,
-          borderRadius: 3,
-          overflow: "hidden"
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          height: "100%",
-          width: `${avgTeacher}%`,
-          background: "#2D6A4F",
-          borderRadius: 3
-        }
-      })))), /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          gap: 12
-        }
-      }, [["📋", st.posts.length, "게시물"], ["💛", st.totalLikes, "응원"], ["💬", st.totalComments, "댓글"]].map(([ic, v, lb]) => /*#__PURE__*/React.createElement("div", {
-        key: lb,
-        style: {
-          textAlign: "center"
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 12,
-          fontWeight: 700,
-          color: C.navy
-        }
-      }, v), /*#__PURE__*/React.createElement("div", {
-        style: {
-          fontSize: 9,
-          color: C.g400
-        }
-      }, lb)))), badges.length > 0 && /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          gap: 3
-        }
-      }, badges.slice(0, 5).map((b, j) => /*#__PURE__*/React.createElement("span", {
-        key: j,
-        style: {
-          fontSize: 14
-        }
-      }, b.emoji)), badges.length > 5 && /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          color: C.g400,
-          alignSelf: "center"
-        }
-      }, "+", badges.length - 5))), latestMedia.length > 0 && /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: "flex",
-          gap: 4,
-          marginTop: 10
-        }
-      }, latestMedia.map((m, j) => /*#__PURE__*/React.createElement("div", {
-        key: j,
-        style: {
-          width: 56,
-          height: 56,
-          borderRadius: 10,
-          overflow: "hidden",
-          flexShrink: 0
-        }
-      }, /*#__PURE__*/React.createElement("img", {
-        src: m.url,
-        style: {
-          width: "100%",
-          height: "100%",
-          objectFit: "cover"
-        },
-        alt: ""
-      })))));
-    }));
-  })(), activeTab === "profile" && /*#__PURE__*/React.createElement("div", {
+  }, "\uB7EC\uBE0C\uCF5C\uC744 \uBCF4\uB0BC \uC218 \uC788\uC5B4\uC694")))), activeTab === "profile" && /*#__PURE__*/React.createElement("div", {
     style: {
       paddingBottom: 100
     }
@@ -5845,7 +5868,138 @@ function App() {
       fontWeight: 700,
       fontSize: 14
     }
-  }, "\uCDE8\uC18C")))), /*#__PURE__*/React.createElement("button", {
+  }, "\uCDE8\uC18C")))), isAdmin && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setShowUserMgmt(v => !v);
+      if (!showUserMgmt) FB.get("users").then(d => {
+        if (d) setAllUsers(Object.values(d).sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      });
+    },
+    style: {
+      width: "100%",
+      background: C.white,
+      borderRadius: 14,
+      padding: "13px 14px",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      border: `1px solid ${C.g200}`
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 18
+    }
+  }, "\uD83D\uDC65"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      textAlign: "left"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, "\uD68C\uC6D0 \uAD00\uB9AC"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.g400
+    }
+  }, "\uAC00\uC785\uC790 \uBAA9\uB85D \uD655\uC778 \uBC0F \uD0C8\uD1F4 \uCC98\uB9AC")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      background: `${C.primary}18`,
+      color: C.primary,
+      borderRadius: 8,
+      padding: "3px 8px",
+      fontWeight: 700
+    }
+  }, allUsers.length, "\uBA85"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: C.g400,
+      fontSize: 16,
+      transform: showUserMgmt ? "rotate(90deg)" : "none",
+      transition: "transform .2s"
+    }
+  }, "\u203A")), showUserMgmt && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.g100,
+      borderRadius: "0 0 14px 14px",
+      padding: "8px",
+      maxHeight: 400,
+      overflowY: "auto"
+    }
+  }, allUsers.length === 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "20px",
+      color: C.g400,
+      fontSize: 13
+    }
+  }, "\uAC00\uC785\uC790\uAC00 \uC5C6\uC5B4\uC694"), allUsers.map(u => {
+    const uPosts = posts.filter(p => p.userId === u.id);
+    return /*#__PURE__*/React.createElement("div", {
+      key: u.id,
+      style: {
+        background: C.white,
+        borderRadius: 12,
+        padding: "11px 12px",
+        marginBottom: 6,
+        display: "flex",
+        alignItems: "center",
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement(Av, {
+      src: u.pic,
+      emoji: u.avatar || "👤",
+      size: 38,
+      radius: 12,
+      color: C.primary
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.navy,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, u.name), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.g400
+      }
+    }, u.school || "학교 미입력", " \xB7 \uAC8C\uC2DC\uBB3C ", uPosts.length, "\uAC1C")), /*#__PURE__*/React.createElement("button", {
+      className: "btn",
+      onClick: async () => {
+        if (!window.confirm(`${u.name} 학생을 탈퇴시킬까요?\n게시물은 유지됩니다.`)) return;
+        await FB.remove(`users/${u.id}`);
+        setAllUsers(prev => prev.filter(x => x.id !== u.id));
+        toast(`🗑️ ${u.name} 학생이 탈퇴됐어요.`);
+      },
+      style: {
+        background: "#FFF5F5",
+        border: "1px solid #FFCDD2",
+        borderRadius: 9,
+        padding: "6px 10px",
+        fontSize: 11,
+        fontWeight: 700,
+        color: "#E53935",
+        flexShrink: 0
+      }
+    }, "\uD0C8\uD1F4"));
+  }))), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setCurrentUser(null);
