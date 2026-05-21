@@ -958,6 +958,15 @@ function App() {
   const [tag, setTag] = useState("#누룽지생산");
   const [selfScore, setSelfScore] = useState(50);
   const [uploading, setUploading] = useState(false);
+  // 기업 모집 공고 폼 상태
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobTag, setJobTag] = useState(JOB_TAGS[0]);
+  const [jobPlace, setJobPlace] = useState("");
+  const [jobHours, setJobHours] = useState("");
+  const [jobContact, setJobContact] = useState("");
+  const [jobDeadline, setJobDeadline] = useState("");
+  const [jobPosting, setJobPosting] = useState(false);
+  const [jobPostings, setJobPostings] = useState([]);
   const [activeTab, setActiveTab] = useState("feed");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullY, setPullY] = useState(0);
@@ -1188,6 +1197,9 @@ function App() {
   }, []);
   useEffect(() => {
     loadFromFirebase();
+    FB.get("jobPostings").then(data => {
+      if (data) setJobPostings(Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+    });
     let iv = null;
     const start = () => {
       if (iv) return;
@@ -1206,8 +1218,7 @@ function App() {
       stop();
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [loadFromFirebase]); // activeTab 제거 - 탭 전환마다 재로드하면 업로드 직후 덮어써짐
-
+  }, [loadFromFirebase]);
   useEffect(() => {
     LS.set("dc_liked", liked);
   }, [liked]);
@@ -4152,7 +4163,127 @@ function App() {
         items: post.mediaList || [],
         index: idx
       })
-    })))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    })))) : /*#__PURE__*/React.createElement(React.Fragment, null, jobPostings.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 16
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.navy,
+        marginBottom: 10
+      }
+    }, "\uD83D\uDCE2 \uCC44\uC6A9 \uACF5\uACE0"), jobPostings.map((jp, i) => {
+      const m = JOB_META[jp.tag] || {
+        color: "#1565C0",
+        emoji: "🏢"
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        key: jp.id,
+        style: {
+          background: C.white,
+          borderRadius: 16,
+          padding: "14px",
+          marginBottom: 9,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+          borderLeft: `4px solid ${m.color}`
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: 6
+        }
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 14,
+          fontWeight: 700,
+          color: C.navy
+        }
+      }, jp.title), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 11,
+          color: C.g400,
+          marginTop: 2
+        }
+      }, jp.companyName, " \xB7 ", jp.time)), /*#__PURE__*/React.createElement("span", {
+        style: {
+          background: `${m.color}18`,
+          color: m.color,
+          borderRadius: 9,
+          padding: "3px 9px",
+          fontSize: 11,
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+          flexShrink: 0
+        }
+      }, m.emoji, " ", jp.tag?.replace("#", ""))), /*#__PURE__*/React.createElement("div", {
+        style: {
+          fontSize: 13,
+          color: C.g600,
+          lineHeight: 1.6,
+          marginBottom: 8
+        }
+      }, jp.desc), /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap"
+        }
+      }, jp.place && /*#__PURE__*/React.createElement("span", {
+        style: {
+          background: C.g100,
+          borderRadius: 8,
+          padding: "3px 8px",
+          fontSize: 11,
+          color: C.g600
+        }
+      }, "\uD83D\uDCCD ", jp.place), jp.hours && /*#__PURE__*/React.createElement("span", {
+        style: {
+          background: C.g100,
+          borderRadius: 8,
+          padding: "3px 8px",
+          fontSize: 11,
+          color: C.g600
+        }
+      }, "\uD83D\uDD50 ", jp.hours), jp.deadline && /*#__PURE__*/React.createElement("span", {
+        style: {
+          background: C.g100,
+          borderRadius: 8,
+          padding: "3px 8px",
+          fontSize: 11,
+          color: C.g600
+        }
+      }, "\uD83D\uDCC5 \uB9C8\uAC10 ", jp.deadline), jp.contact && /*#__PURE__*/React.createElement("span", {
+        style: {
+          background: `${m.color}10`,
+          color: m.color,
+          borderRadius: 8,
+          padding: "3px 8px",
+          fontSize: 11,
+          fontWeight: 600
+        }
+      }, "\uD83D\uDCDE ", jp.contact)), jp.companyId === currentUser?.id && /*#__PURE__*/React.createElement("button", {
+        className: "btn",
+        onClick: async () => {
+          await FB.remove(`jobPostings/${jp.id}`);
+          setJobPostings(prev => prev.filter(j => j.id !== jp.id));
+          toast("🗑️ 공고가 삭제됐어요.");
+        },
+        style: {
+          marginTop: 8,
+          background: "#FFF5F5",
+          border: "1px solid #FFCDD2",
+          borderRadius: 9,
+          padding: "5px 12px",
+          fontSize: 11,
+          color: "#E53935",
+          fontWeight: 700
+        }
+      }, "\uC0AD\uC81C"));
+    })), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 13,
         fontWeight: 700,
@@ -4215,7 +4346,308 @@ function App() {
         }
       }, cnt, "\uAC1C"));
     })));
-  })(), activeTab === "upload" && /*#__PURE__*/React.createElement("div", {
+  })(), activeTab === "upload" && (userType === "company" ?
+  /*#__PURE__*/
+  /* 기업 모집 공고 폼 */
+  React.createElement("div", {
+    style: {
+      padding: "20px 14px 130px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 900,
+      color: C.navy,
+      marginBottom: 3
+    }
+  }, "\uD83D\uDCE2 \uBAA8\uC9D1 \uACF5\uACE0 \uC62C\uB9AC\uAE30"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.g400,
+      marginBottom: 18
+    }
+  }, "\uC7A5\uC560\uD559\uC0DD \uCC44\uC6A9 \uACF5\uACE0\uB97C \uC791\uC131\uD574\uC694"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 18,
+      padding: "16px",
+      marginBottom: 12,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: C.navy,
+      marginBottom: 8
+    }
+  }, "\uD83C\uDFF7\uFE0F \uBAA8\uC9D1 \uC9C1\uBB34"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 7,
+      flexWrap: "wrap"
+    }
+  }, JOB_TAGS.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t,
+    className: "btn",
+    onClick: () => setJobTag(t),
+    style: {
+      padding: "7px 12px",
+      borderRadius: 12,
+      border: "none",
+      background: jobTag === t ? C.primary : C.g100,
+      color: jobTag === t ? "#fff" : C.g600,
+      fontWeight: jobTag === t ? 700 : 400,
+      fontSize: 12
+    }
+  }, (JOB_META[t] || {
+    emoji: "✨"
+  }).emoji, " ", t)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 18,
+      padding: "16px",
+      marginBottom: 12,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: C.navy,
+      marginBottom: 8
+    }
+  }, "\u270F\uFE0F \uACF5\uACE0 \uC81C\uBAA9"), /*#__PURE__*/React.createElement("input", {
+    value: jobTitle,
+    onChange: e => setJobTitle(e.target.value),
+    placeholder: "\uC608) \uB204\uB8FD\uC9C0 \uC0DD\uC0B0 \uBCF4\uC870 \uC778\uB825 \uBAA8\uC9D1",
+    style: {
+      width: "100%",
+      border: `1.5px solid ${jobTitle ? C.primary : C.g200}`,
+      borderRadius: 12,
+      padding: "11px 13px",
+      fontSize: 14,
+      color: C.navy,
+      outline: "none",
+      background: C.g100
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 18,
+      padding: "16px",
+      marginBottom: 12,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: C.navy,
+      marginBottom: 8
+    }
+  }, "\uD83D\uDCCB \uC0C1\uC138 \uB0B4\uC6A9"), /*#__PURE__*/React.createElement("textarea", {
+    value: desc,
+    onChange: e => setDesc(e.target.value),
+    placeholder: "주요 업무, 근무 환경, 지원 자격 등을 자유롭게 적어주세요",
+    rows: 5,
+    style: {
+      width: "100%",
+      border: "none",
+      outline: "none",
+      fontSize: 14,
+      color: C.navy,
+      resize: "none",
+      background: "transparent",
+      lineHeight: 1.7
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.g400,
+      textAlign: "right"
+    }
+  }, desc.length, "\uC790")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 10,
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 16,
+      padding: "14px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: C.navy,
+      marginBottom: 6
+    }
+  }, "\uD83D\uDCCD \uADFC\uBB34\uC9C0"), /*#__PURE__*/React.createElement("input", {
+    value: jobPlace,
+    onChange: e => setJobPlace(e.target.value),
+    placeholder: "\uC608) \uACBD\uAE30\uB3C4 \uACE0\uC591\uC2DC",
+    style: {
+      width: "100%",
+      border: "none",
+      outline: "none",
+      fontSize: 13,
+      color: C.navy,
+      background: "transparent"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 16,
+      padding: "14px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: C.navy,
+      marginBottom: 6
+    }
+  }, "\uD83D\uDD50 \uADFC\uBB34 \uC2DC\uAC04"), /*#__PURE__*/React.createElement("input", {
+    value: jobHours,
+    onChange: e => setJobHours(e.target.value),
+    placeholder: "\uC608) 09:00~18:00",
+    style: {
+      width: "100%",
+      border: "none",
+      outline: "none",
+      fontSize: 13,
+      color: C.navy,
+      background: "transparent"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 16,
+      padding: "14px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: C.navy,
+      marginBottom: 6
+    }
+  }, "\uD83D\uDCDE \uC5F0\uB77D\uCC98"), /*#__PURE__*/React.createElement("input", {
+    value: jobContact,
+    onChange: e => setJobContact(e.target.value),
+    placeholder: "\uC608) 031-000-0000",
+    style: {
+      width: "100%",
+      border: "none",
+      outline: "none",
+      fontSize: 13,
+      color: C.navy,
+      background: "transparent"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 16,
+      padding: "14px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: C.navy,
+      marginBottom: 6
+    }
+  }, "\uD83D\uDCC5 \uBAA8\uC9D1 \uB9C8\uAC10\uC77C"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: jobDeadline,
+    onChange: e => setJobDeadline(e.target.value),
+    style: {
+      width: "100%",
+      border: "none",
+      outline: "none",
+      fontSize: 13,
+      color: C.navy,
+      background: "transparent"
+    }
+  }))), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: async () => {
+      if (!jobTitle.trim() || !desc.trim()) {
+        toast("📝 공고 제목과 상세 내용을 입력해주세요!");
+        return;
+      }
+      setJobPosting(true);
+      const id = "jp" + Date.now();
+      const newJob = {
+        id,
+        companyId: currentUser?.id,
+        companyName: currentUser?.name || "기업",
+        tag: jobTag,
+        title: jobTitle.trim(),
+        desc: desc.trim(),
+        place: jobPlace.trim(),
+        hours: jobHours.trim(),
+        contact: jobContact.trim(),
+        deadline: jobDeadline,
+        createdAt: Date.now(),
+        time: new Date().toLocaleString("ko-KR", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      };
+      await FB.set(`jobPostings/${id}`, newJob);
+      setJobPostings(prev => [newJob, ...prev]);
+      setJobTitle("");
+      setDesc("");
+      setJobPlace("");
+      setJobHours("");
+      setJobContact("");
+      setJobDeadline("");
+      setJobPosting(false);
+      toast("📢 모집 공고가 등록됐어요!");
+      setActiveTab("search");
+    },
+    disabled: jobPosting,
+    style: {
+      width: "100%",
+      padding: "17px",
+      borderRadius: 20,
+      border: "none",
+      background: jobPosting ? C.g200 : `linear-gradient(135deg,#1565C0,#42A5F5)`,
+      color: jobPosting ? C.g400 : "#fff",
+      fontSize: 16,
+      fontWeight: 900,
+      boxShadow: jobPosting ? "none" : "0 8px 24px rgba(21,101,192,0.35)"
+    }
+  }, jobPosting ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-block",
+      width: 16,
+      height: 16,
+      border: "2.5px solid #ccc",
+      borderTopColor: "#1565C0",
+      borderRadius: "50%",
+      animation: "spin 0.8s linear infinite"
+    }
+  }), "\uB4F1\uB85D \uC911...") : "📢 공고 등록하기")) : /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "20px 14px 130px"
     }
@@ -4639,7 +5071,7 @@ function App() {
       borderRadius: "50%",
       animation: "spin 0.8s linear infinite"
     }
-  }), "\uC11C\uBC84\uC5D0 \uC800\uC7A5 \uC911...") : "🚀 포트폴리오 업로드 (전체 공개)")), activeTab === "notify" && /*#__PURE__*/React.createElement("div", {
+  }), "\uC11C\uBC84\uC5D0 \uC800\uC7A5 \uC911...") : "🚀 포트폴리오 업로드 (전체 공개)"))), activeTab === "notify" && /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "14px",
       paddingBottom: 100
