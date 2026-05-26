@@ -931,6 +931,7 @@ function App() {
   const [formPic, setFormPic] = useState(null);
   const [posts, setPosts] = useState(DEMO_POSTS);
   const [postsReady, setPostsReady] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10); // 처음엔 10개만 로드
   const [liked, setLiked] = useState(() => LS.get("dc_liked", {}));
   const [loved, setLoved] = useState({});
   const [loveModal, setLoveModal] = useState(null);
@@ -982,6 +983,8 @@ function App() {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [showUserMgmt, setShowUserMgmt] = useState(false);
+  const [allLovecalls, setAllLovecalls] = useState([]);
+  const [showLovecallMgmt, setShowLovecallMgmt] = useState(false);
 
   // useEffect보다 먼저 정의해야 TDZ 오류 없음
   const isAdmin = !!(currentUser?.name?.trim().includes("전예원") && userType === "student");
@@ -1261,6 +1264,17 @@ function App() {
     if (activeTab !== 'profile' || !isAdmin) return;
     FB.get("users").then(data => {
       if (data) setAllUsers(Object.values(data).sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+    });
+    FB.get("lovecalls").then(data => {
+      if (!data) return;
+      const all = [];
+      Object.entries(data).forEach(([userId, calls]) => {
+        Object.values(calls).forEach(c => all.push({
+          ...c,
+          toUserId: userId
+        }));
+      });
+      setAllLovecalls(all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
     });
   }, [activeTab, isAdmin]);
 
@@ -3656,7 +3670,10 @@ function App() {
   }, ["전체", ...JOB_TAGS].map(f => /*#__PURE__*/React.createElement("button", {
     key: f,
     className: "btn",
-    onClick: () => setFilterTag(f),
+    onClick: () => {
+      setFilterTag(f);
+      setVisibleCount(10);
+    },
     style: {
       whiteSpace: "nowrap",
       padding: "7px 13px",
@@ -3689,7 +3706,7 @@ function App() {
     style: {
       fontSize: 13
     }
-  }, "\uC11C\uBC84\uC5D0\uC11C \uBD88\uB7EC\uC624\uB294 \uC911...")), postsReady && filtered.map((post, i) => /*#__PURE__*/React.createElement("div", {
+  }, "\uC11C\uBC84\uC5D0\uC11C \uBD88\uB7EC\uC624\uB294 \uC911...")), postsReady && filtered.slice(0, visibleCount).map((post, i) => /*#__PURE__*/React.createElement("div", {
     key: post.id,
     style: {
       animation: `fadeUp 0.42s ${Math.min(i, 4) * 0.07}s ease forwards`,
@@ -3711,7 +3728,21 @@ function App() {
       items: post.mediaList || [],
       index: idx
     })
-  }))), postsReady && filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }))), postsReady && filtered.length > visibleCount && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setVisibleCount(v => v + 10),
+    style: {
+      width: "100%",
+      padding: "13px",
+      borderRadius: 14,
+      border: `1px solid ${C.g200}`,
+      background: C.white,
+      color: C.g600,
+      fontSize: 14,
+      fontWeight: 600,
+      marginBottom: 12
+    }
+  }, "\uB354 \uBCF4\uAE30 (", filtered.length - visibleCount, "\uAC1C \uB0A8\uC74C)"), postsReady && filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "56px 20px",
@@ -6563,20 +6594,215 @@ function App() {
         flexShrink: 0
       }
     }, "\uD0C8\uD1F4"));
-  }))), /*#__PURE__*/React.createElement("button", {
+  }))), isAdmin && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
-      setCurrentUser(null);
-      LS.set("dc_current_user", null);
-      setScreen("login");
-      setLoginTab("new");
-      setFormName("");
-      setFormSchool("");
-      setFormPic(null);
-      setResumeText("");
-      setResumeStrengths([]);
-      setResumeCertificate("");
+      setShowLovecallMgmt(v => !v);
+      if (!showLovecallMgmt) {
+        FB.get("lovecalls").then(data => {
+          if (!data) return;
+          const all = [];
+          Object.entries(data).forEach(([userId, calls]) => {
+            Object.values(calls).forEach(c => all.push({
+              ...c,
+              toUserId: userId
+            }));
+          });
+          setAllLovecalls(all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+        });
+      }
     },
+    style: {
+      width: "100%",
+      background: C.white,
+      borderRadius: 14,
+      padding: "13px 14px",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      border: `1px solid ${C.g200}`
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 18
+    }
+  }, "\uD83D\uDC8C"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      textAlign: "left"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, "\uB7EC\uBE0C\uCF5C \uD604\uD669"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.g400
+    }
+  }, "\uAE30\uC5C5-\uD559\uC0DD \uB7EC\uBE0C\uCF5C \uC8FC\uACE0\uBC1B\uAE30 \uD604\uD669")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      background: "#FFF3E0",
+      color: C.gold,
+      borderRadius: 8,
+      padding: "3px 8px",
+      fontWeight: 700
+    }
+  }, allLovecalls.length, "\uAC74"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: C.g400,
+      fontSize: 16,
+      transform: showLovecallMgmt ? "rotate(90deg)" : "none",
+      transition: "transform .2s"
+    }
+  }, "\u203A")), showLovecallMgmt && (() => {
+    // 학생별 러브콜 집계
+    const studentMap = {};
+    allLovecalls.forEach(lc => {
+      const student = posts.find(p => p.userId === lc.toUserId);
+      const name = student?.name || lc.toUserId;
+      if (!studentMap[lc.toUserId]) studentMap[lc.toUserId] = {
+        name,
+        calls: []
+      };
+      studentMap[lc.toUserId].calls.push(lc);
+    });
+    const sorted = Object.values(studentMap).sort((a, b) => b.calls.length - a.calls.length);
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: C.g100,
+        borderRadius: "0 0 14px 14px",
+        padding: "10px 8px",
+        marginBottom: 8
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 6,
+        marginBottom: 10
+      }
+    }, [["💌", "총 러브콜", allLovecalls.length + "건", C.gold], ["👥", "받은 학생", [...new Set(allLovecalls.map(l => l.toUserId))].length + "명", "#1565C0"], ["🏢", "보낸 기업", [...new Set(allLovecalls.map(l => l.from))].length + "곳", C.accent]].map(([ic, lb, vl, cl]) => /*#__PURE__*/React.createElement("div", {
+      key: lb,
+      style: {
+        background: C.white,
+        borderRadius: 10,
+        padding: "10px 6px",
+        textAlign: "center"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 16
+      }
+    }, ic), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 14,
+        fontWeight: 900,
+        color: cl,
+        marginTop: 2
+      }
+    }, vl), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: C.g400
+      }
+    }, lb)))), sorted.length === 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "center",
+        padding: "16px",
+        color: C.g400,
+        fontSize: 13
+      }
+    }, "\uB7EC\uBE0C\uCF5C\uC774 \uC5C6\uC5B4\uC694"), sorted.map((st, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        background: C.white,
+        borderRadius: 12,
+        padding: "12px",
+        marginBottom: 6
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 8
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.navy
+      }
+    }, st.name), /*#__PURE__*/React.createElement("span", {
+      style: {
+        background: "#FFF3E0",
+        color: C.gold,
+        borderRadius: 8,
+        padding: "3px 9px",
+        fontSize: 12,
+        fontWeight: 700
+      }
+    }, "\uD83D\uDC8C ", st.calls.length, "\uAC74")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 5
+      }
+    }, st.calls.map((c, j) => {
+      const m = JOB_META[c.tag] || {
+        color: C.primary,
+        emoji: "✨"
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        key: j,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: C.g100,
+          borderRadius: 8,
+          padding: "6px 10px"
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 13
+        }
+      }, m.emoji), /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: 1,
+          minWidth: 0
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 12,
+          fontWeight: 600,
+          color: C.navy
+        }
+      }, c.from), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 11,
+          color: C.g400
+        }
+      }, " \xB7 ", c.tag?.replace("#", ""))), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 10,
+          color: C.g400,
+          flexShrink: 0
+        }
+      }, c.time || ""));
+    })))));
+  })()), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {},
     style: {
       width: "100%",
       padding: "13px",
