@@ -1269,8 +1269,9 @@ function App() {
       if (!data) return;
       const all = [];
       Object.entries(data).forEach(([userId, calls]) => {
-        Object.values(calls).forEach(c => all.push({
+        Object.entries(calls).forEach(([lcId, c]) => all.push({
           ...c,
+          id: lcId,
           toUserId: userId
         }));
       });
@@ -6607,8 +6608,9 @@ function App() {
           if (!data) return;
           const all = [];
           Object.entries(data).forEach(([userId, calls]) => {
-            Object.values(calls).forEach(c => all.push({
+            Object.entries(calls).forEach(([lcId, c]) => all.push({
               ...c,
+              id: lcId,
               toUserId: userId
             }));
           });
@@ -6798,7 +6800,24 @@ function App() {
           color: C.g400,
           flexShrink: 0
         }
-      }, c.time || ""));
+      }, c.time || ""), /*#__PURE__*/React.createElement("button", {
+        className: "btn",
+        onClick: async () => {
+          await FB.remove(`lovecalls/${c.toUserId}/${c.id}`);
+          setAllLovecalls(prev => prev.filter(x => x.id !== c.id));
+          toast("🗑️ 러브콜 기록이 삭제됐어요.");
+        },
+        style: {
+          background: "#FFF5F5",
+          border: "1px solid #FFCDD2",
+          borderRadius: 7,
+          padding: "3px 8px",
+          fontSize: 10,
+          color: "#E53935",
+          fontWeight: 700,
+          flexShrink: 0
+        }
+      }, "\uC0AD\uC81C"));
     })))));
   })()), /*#__PURE__*/React.createElement("button", {
     className: "btn",
