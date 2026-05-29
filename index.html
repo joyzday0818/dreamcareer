@@ -44,6 +44,76 @@
   useCallback
 } = React;
 const FIREBASE_URL = "https://dreamcar2r-default-rtdb.asia-southeast1.firebasedatabase.app";
+const CLOUDINARY_CLOUD = "dhahimnof";
+const CLOUDINARY_PRESET = "dreamcareer";
+
+async function uploadToCloudinary(file) {
+  // 이미지는 압축 후 업로드, 영상은 직접 업로드
+  let blob, mimeType;
+  if (file.type && file.type.startsWith("video")) {
+    blob = file;
+    mimeType = file.type;
+  } else {
+    const compressed = await compressFile(file);
+    blob = await fetch(compressed.url).then(r => r.blob());
+    mimeType = compressed.type;
+  }
+  const fd = new FormData();
+  fd.append("file", blob);
+  fd.append("upload_preset", CLOUDINARY_PRESET);
+  const resourceType = mimeType.startsWith("video") ? "video" : "image";
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/${resourceType}/upload`, {
+    method: "POST", body: fd
+  });
+  const data = await res.json();
+  if (!data.secure_url) throw new Error(data.error?.message || "업로드 실패");
+  return { url: data.secure_url, type: mimeType };
+}
+const CLOUD_NAME = "dhahimnof";
+const CLOUD_PRESET = "dreamcareer";
+
+// Cloudinary 업로드 (이미지/영상을 CDN에 올리고 URL 반환)
+async function uploadToCloudinary(file) {
+  const isVideo = file.type.startsWith("video/");
+  const resourceType = isVideo ? "video" : "image";
+
+  // 이미지면 먼저 압축 후 업로드
+  let uploadFile = file;
+  if (!isVideo) {
+    uploadFile = await new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => res(blob), "image/jpeg", 0.82);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const formData = new FormData();
+  formData.append("file", uploadFile);
+  formData.append("upload_preset", CLOUD_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
+    { method: "POST", body: formData }
+  );
+  const data = await res.json();
+  if (!data.secure_url) throw new Error(data.error?.message || "업로드 실패");
+  return { url: data.secure_url, type: file.type, public_id: data.public_id };
+}
 const FB = {
   async get(path) {
     try {
@@ -1322,15 +1392,34 @@ function App() {
   const pickFiles = async e => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    const r = await Promise.all(files.map(f => compressFile(f)));
-    setMediaList(prev => [...prev, ...r]);
+    setUploading(true);
+    toast("📤 사진/영상 업로드 중... 잠깐만요!");
+    const results = [];
+    for (const file of files) {
+      try {
+        const r = await uploadToCloudinary(file);
+        results.push(r);
+      } catch(err) {
+        toast("⚠️ " + (file.name||"파일") + " 업로드 실패: " + err.message);
+      }
+    }
+    setMediaList(prev => [...prev, ...results]);
+    setUploading(false);
     e.target.value = "";
   };
   const pickSingleFile = async (e, onDone) => {
     const file = e.target.files[0];
     if (!file) return;
-    const r = await compressFile(file);
-    onDone(r.url);
+    toast("📤 사진 업로드 중...");
+    try {
+      const r = await uploadToCloudinary(file);
+      onDone(r.url);
+    } catch(err) {
+      // Cloudinary 실패 시 base64 fallback
+      const r = await compressFile(file);
+      onDone(r.url);
+      toast("⚠️ CDN 업로드 실패, 기본 방식으로 저장됐어요.");
+    }
     e.target.value = "";
   };
   const handleRegister = async () => {
