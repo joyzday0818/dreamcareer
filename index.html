@@ -1258,46 +1258,62 @@ function App() {
   const loadFromFirebase = useCallback(async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
     try {
-      // 최신 20개만 가져오기 (서버사이드 페이지네이션)
-      const url = `${FIREBASE_URL}/posts.json?orderBy="createdAt"&limitToLast=${PAGE_SIZE}`;
+      // $key 기준 정렬 - 인덱스 불필요, 키가 p{timestamp}라 시간순
+      const url = `${FIREBASE_URL}/posts.json?orderBy="$key"&limitToLast=${PAGE_SIZE}`;
       const res = await fetch(url);
       const data = res.ok ? await res.json() : null;
-      if (data) {
+      if (data && !data.error) {
         const fp = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setHasMore(fp.length >= PAGE_SIZE);
-        setOldestTs(fp.length > 0 ? Math.min(...fp.map(p => p.createdAt || 0)) : null);
+        setOldestTs(fp.length > 0 ? fp[fp.length - 1].id : null);
         setPosts(prev => {
           const fbIds = new Set(fp.map(p => p.id));
-          const localOnly = prev.filter(p => !fbIds.has(p.id) && (p.createdAt || 0) > (fp[0]?.createdAt || 0));
+          const localOnly = prev.filter(p => !fbIds.has(p.id));
           return [...localOnly, ...fp].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         });
+      } else {
+        // 쿼리 실패 시 전체 로드 fallback
+        const fallback = await FB.get("posts");
+        if (fallback) {
+          const fp = Object.values(fallback).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setHasMore(false);
+          setPosts(fp);
+        }
       }
       setPostsReady(true);
-    } catch (e) { setPostsReady(true); }
+    } catch (e) {
+      // 네트워크 오류 시 전체 로드 시도
+      try {
+        const fallback = await FB.get("posts");
+        if (fallback) setPosts(Object.values(fallback).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+      } catch(e2) {}
+      setPostsReady(true);
+    }
     if (showRefresh) setTimeout(() => setIsRefreshing(false), 600);
   }, []);
 
   const loadMoreFromFirebase = async () => {
     if (!hasMore || !oldestTs) return;
     try {
-      const endAt = oldestTs - 1;
-      const url = `${FIREBASE_URL}/posts.json?orderBy="createdAt"&limitToLast=${PAGE_SIZE}&endAt=${endAt}`;
+      const url = `${FIREBASE_URL}/posts.json?orderBy="$key"&limitToLast=${PAGE_SIZE}&endAt="${oldestTs}"`;
       const res = await fetch(url);
       const data = res.ok ? await res.json() : null;
-      if (data) {
-        const more = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setHasMore(more.length >= PAGE_SIZE);
-        if (more.length > 0) setOldestTs(Math.min(...more.map(p => p.createdAt || 0)));
+      if (data && !data.error) {
+        const more = Object.values(data)
+          .filter(p => p.id !== oldestTs) // endAt은 inclusive라 마지막 항목 제외
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setHasMore(more.length >= PAGE_SIZE - 1);
+        if (more.length > 0) setOldestTs(more[more.length - 1].id);
         setPosts(prev => {
           const existIds = new Set(prev.map(p => p.id));
-          const newPosts = more.filter(p => !existIds.has(p.id));
-          return [...prev, ...newPosts].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          return [...prev, ...more.filter(p => !existIds.has(p.id))]
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         });
         setVisibleCount(v => v + PAGE_SIZE);
       } else {
         setHasMore(false);
       }
-    } catch(e) {}
+    } catch(e) { setHasMore(false); }
   };
   useEffect(() => {
     loadFromFirebase();
