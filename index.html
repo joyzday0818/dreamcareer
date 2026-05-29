@@ -1251,23 +1251,54 @@ function App() {
   useEffect(() => {
     setTimeout(() => setScreen("login"), 2000);
   }, []);
+  const [hasMore, setHasMore] = React.useState(true);
+  const [oldestTs, setOldestTs] = React.useState(null);
+  const PAGE_SIZE = 20;
+
   const loadFromFirebase = useCallback(async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true);
     try {
-      const data = await FB.get("posts");
+      // 최신 20개만 가져오기 (서버사이드 페이지네이션)
+      const url = `${FIREBASE_URL}/posts.json?orderBy="createdAt"&limitToLast=${PAGE_SIZE}`;
+      const res = await fetch(url);
+      const data = res.ok ? await res.json() : null;
       if (data) {
         const fp = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        // 로컬에만 있는 게시물(Firebase 전파 전)도 유지
+        setHasMore(fp.length >= PAGE_SIZE);
+        setOldestTs(fp.length > 0 ? Math.min(...fp.map(p => p.createdAt || 0)) : null);
         setPosts(prev => {
           const fbIds = new Set(fp.map(p => p.id));
-          const localOnly = prev.filter(p => !fbIds.has(p.id));
+          const localOnly = prev.filter(p => !fbIds.has(p.id) && (p.createdAt || 0) > (fp[0]?.createdAt || 0));
           return [...localOnly, ...fp].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         });
       }
       setPostsReady(true);
-    } catch (e) {}
+    } catch (e) { setPostsReady(true); }
     if (showRefresh) setTimeout(() => setIsRefreshing(false), 600);
   }, []);
+
+  const loadMoreFromFirebase = async () => {
+    if (!hasMore || !oldestTs) return;
+    try {
+      const endAt = oldestTs - 1;
+      const url = `${FIREBASE_URL}/posts.json?orderBy="createdAt"&limitToLast=${PAGE_SIZE}&endAt=${endAt}`;
+      const res = await fetch(url);
+      const data = res.ok ? await res.json() : null;
+      if (data) {
+        const more = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setHasMore(more.length >= PAGE_SIZE);
+        if (more.length > 0) setOldestTs(Math.min(...more.map(p => p.createdAt || 0)));
+        setPosts(prev => {
+          const existIds = new Set(prev.map(p => p.id));
+          const newPosts = more.filter(p => !existIds.has(p.id));
+          return [...prev, ...newPosts].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        });
+        setVisibleCount(v => v + PAGE_SIZE);
+      } else {
+        setHasMore(false);
+      }
+    } catch(e) {}
+  };
   useEffect(() => {
     loadFromFirebase();
     FB.get("jobPostings").then(data => {
@@ -3818,9 +3849,15 @@ function App() {
       items: post.mediaList || [],
       index: idx
     })
-  }))), postsReady && filtered.length > visibleCount && /*#__PURE__*/React.createElement("button", {
+  }))), postsReady && (filtered.length > visibleCount || hasMore) && /*#__PURE__*/React.createElement("button", {
     className: "btn",
-    onClick: () => setVisibleCount(v => v + 10),
+    onClick: () => {
+      if (filtered.length > visibleCount) {
+        setVisibleCount(v => v + 10);
+      } else if (hasMore) {
+        loadMoreFromFirebase();
+      }
+    },
     style: {
       width: "100%",
       padding: "13px",
@@ -3832,7 +3869,7 @@ function App() {
       fontWeight: 600,
       marginBottom: 12
     }
-  }, "\uB354 \uBCF4\uAE30 (", filtered.length - visibleCount, "\uAC1C \uB0A8\uC74C)"), postsReady && filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, filtered.length > visibleCount ? `더 보기 (${filtered.length - visibleCount}개 남음)` : "더 불러오기 ↓"), postsReady && filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "56px 20px",
