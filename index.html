@@ -8,8 +8,8 @@
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='85'>✨</text></svg>"/>
   <meta name="theme-color" content="#FF6B35"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-title" content="드림 커리어"/>
-  <title>드림 커리어</title>
+  <meta name="apple-mobile-web-app-title" content="드림커리어"/>
+  <title>드림커리어</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;color-scheme:light}
@@ -187,7 +187,7 @@ const C = {
 };
 
 // ✅ 변경2: 직무태그 순서 및 목록 업데이트
-const JOB_TAGS = ["#누룽지생산", "#운동화 세탁", "#청소", "#티마스터", "#산업체", "#예술", "#원예재배", "#스피치", "#바리스타", "#뻥과자생산", "#휠마스터"];
+const JOB_TAGS = ["#누룽지생산", "#운동화 세탁", "#청소", "#티마스터", "#산업체", "#예술", "#원예재배", "#스피치", "#바리스타", "#뻥과자생산", "#휠마스터", "#조립포장"];
 const JOB_META = {
   "#누룽지생산": {
     color: "#C17F24",
@@ -1026,7 +1026,7 @@ function App() {
   const [teacherFormVisible, setTeacherFormVisible] = useState(false);
   const [teacherName, setTeacherName] = useState("");
   const [mediaList, setMediaList] = useState([]);
-  const [desc, setDesc] = useState("\uD83D\uDD35 \uC624\uB298 \uD55C \uC791\uC5C5\n\uD83D\uDFE1 \uC5B4\uB824\uC6E0\uB358 \uC810\n\uD83D\uDFE2 \uC798\uB41C \uC810 / \uB290\uB080 \uC810\n\uD83D\uDD34 \uB2E4\uC74C\uC5D0 \uB354 \uC798\uD558\uACE0 \uC2F6\uC740 \uC810");
+  const [desc, setDesc] = useState("");
   const [selfPraise, setSelfPraise] = useState("");
   const [tag, setTag] = useState("#누룽지생산");
   const [selfScore, setSelfScore] = useState(50);
