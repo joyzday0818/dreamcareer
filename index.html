@@ -1564,12 +1564,12 @@ function App() {
       toast("💛 로그인하면 응원을 보낼 수 있어요!");
       return;
     }
-    const isLiked = !!liked[post.id];
+    const isLiked = !!liked[post.id] && (post.likes || 0) > 0;
     setLiked(p => ({
       ...p,
       [post.id]: !isLiked
     }));
-    const newLikes = (post.likes || 0) + (isLiked ? -1 : 1);
+    const newLikes = Math.max(0, (post.likes || 0) + (isLiked ? -1 : 1));
     setPosts(prev => prev.map(p => p.id === post.id ? {
       ...p,
       likes: newLikes
