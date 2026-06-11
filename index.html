@@ -296,23 +296,23 @@ function calcBadges(posts, resume) {
   }, {
     emoji: "🏆",
     label: "포트폴리오 달인",
-    ok: posts.length >= 20
+    ok: posts.length >= 50
   }, {
     emoji: "💬",
     label: "소통왕",
-    ok: totalComments >= 20
+    ok: totalComments >= 40
   }, {
     emoji: "🌟",
     label: "슈퍼스타",
-    ok: totalLikes >= 50
+    ok: totalLikes >= 100
   }, {
     emoji: "🎓",
     label: "우수 직업인",
-    ok: teacherScored.length >= 3 && avgTeacher >= 90
+    ok: teacherScored.length >= 10 && avgTeacher >= 95
   }, {
     emoji: "💼",
     label: "취업 준비 완료",
-    ok: !!resume?.text && posts.length >= 15 && tagSet.size >= 2
+    ok: !!resume?.text && posts.length >= 30 && tagSet.size >= 3
   }];
 }
 function compressFile(file) {
