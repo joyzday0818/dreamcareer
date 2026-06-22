@@ -245,6 +245,45 @@ const JOB_META = {
 const AVATARS = ["👩", "👦", "👧", "🧑", "👨", "👩‍🦱", "👦🏽", "👧🏻", "🧑🏾", "👨🏼"];
 const DEMO_POSTS = [];
 
+// 직무 적합도 한 줄 평 생성
+function calcPersonaLine(posts) {
+  if (!posts.length) return null;
+  const totalLikes = posts.reduce((s,p)=>s+(p.likes||0),0);
+  const totalComments = posts.reduce((s,p)=>s+(p.commentList||[]).length,0);
+  const teacherScored = posts.filter(p=>p.teacherScore!=null);
+  const avgTeacher = teacherScored.length ? teacherScored.reduce((s,p)=>s+(p.teacherScore||0),0)/teacherScored.length : 0;
+  const avgSelf = posts.reduce((s,p)=>s+(p.progress||0),0)/posts.length;
+  const tagCount = new Set(posts.map(p=>p.tag).filter(Boolean)).size;
+
+  const candidates = [];
+  if (avgTeacher >= 90) candidates.push({score:avgTeacher, text:"꼼꼼함이 돋보이는 신뢰형 직업인"});
+  if (avgSelf >= 85) candidates.push({score:avgSelf, text:"스스로 높은 기준을 세우는 성장형 인재"});
+  if (totalLikes >= 30) candidates.push({score:totalLikes, text:"동료들에게 인정받는 인기형 협업가"});
+  if (totalComments >= 15) candidates.push({score:totalComments*2, text:"소통과 공감을 나누는 따뜻한 동료"});
+  if (tagCount >= 3) candidates.push({score:tagCount*10, text:"다양한 분야를 넘나드는 다재다능형 인재"});
+  if (posts.length >= 15) candidates.push({score:posts.length, text:"꾸준함이 강점인 성실한 기록가"});
+  if (candidates.length === 0) candidates.push({score:1, text:"매일 한 걸음씩 성장하는 도전형 인재"});
+
+  candidates.sort((a,b)=>b.score-a.score);
+  return candidates[0].text;
+}
+
+// 가장 긍정적인 응원 댓글 추출
+function pickHighlightComments(posts, max) {
+  max = max || 2;
+  const POSITIVE_WORDS = ["잘","최고","멋","대단","훌륭","좋","감동","뿌듯","응원","화이팅","최선","완벽","성장","발전"];
+  const all = [];
+  posts.forEach(p => {
+    (p.commentList||[]).forEach(c => {
+      if (!c.text) return;
+      const score = POSITIVE_WORDS.reduce((s,w)=>s+(c.text.includes(w)?1:0),0) + Math.min(c.text.length/20,2);
+      all.push({text:c.text, from:c.name||c.from||"익명", score});
+    });
+  });
+  all.sort((a,b)=>b.score-a.score);
+  return all.slice(0,max);
+}
+
 // 전역 배지 정의 (posts, resume 데이터로 계산)
 function calcBadges(posts, resume) {
   const totalLikes = posts.reduce((s, p) => s + (p.likes || 0), 0);
@@ -3027,15 +3066,28 @@ function App() {
         }).color;
         return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;color:#5A5A54">${t.replace("#", "")}</span><span style="font-size:12px;font-weight:700;color:${mc}">${avg}점</span></div><div style="height:6px;background:#F5F5F3;border-radius:3px;overflow:hidden"><div style="height:100%;width:${avg}%;background:${mc};border-radius:3px"></div></div></div>`;
       }).join("");
-      const firstProgress = studentPosts.length ? studentPosts[studentPosts.length-1]?.progress||0 : 0;
-      const lastProgress = studentPosts.length ? studentPosts[0]?.progress||0 : 0;
-      const growthHtml = studentPosts.length >= 2 ? `<section><h3>📈 숙련도 성장 흔적</h3><div style="display:flex;align-items:center;gap:12px;background:#F5F5F3;border-radius:10px;padding:12px"><div style="flex:1;text-align:center"><div style="font-size:11px;color:#9A9A94;margin-bottom:4px">처음</div><div style="font-size:24px;font-weight:900;color:#9A9A94">${firstProgress}점</div></div><div style="font-size:20px;color:#F4A228">→</div><div style="flex:1;text-align:center"><div style="font-size:11px;color:#FF6B35;margin-bottom:4px">최근</div><div style="font-size:24px;font-weight:900;color:#FF6B35">${lastProgress}점</div></div></div></section>` : "";
+      const chartPosts = studentPosts.slice().reverse().slice(-10);
+      let growthHtml = "";
+      if (chartPosts.length >= 2) {
+        const cW=260,cH=70,cPad=8;
+        const cPts = chartPosts.map((p,i) => ({x: cPad+(i/(chartPosts.length-1))*(cW-cPad*2), y: cH-cPad-((p.progress||0)/100)*(cH-cPad*2)}));
+        const cPathD = cPts.map((pt,i)=>(i===0?"M":"L")+pt.x.toFixed(1)+","+pt.y.toFixed(1)).join(" ");
+        const cAreaD = cPathD + ` L${cPts[cPts.length-1].x.toFixed(1)},${cH-cPad} L${cPts[0].x.toFixed(1)},${cH-cPad} Z`;
+        const cCircles = cPts.map((pt,i)=>`<circle cx="${pt.x}" cy="${pt.y}" r="${i===cPts.length-1?4:2.5}" fill="${i===cPts.length-1?"#F4A228":"#FF6B35"}"/>`).join("");
+        growthHtml = `<section><h3>📈 숙련도 성장 그래프</h3><div style="background:#F5F5F3;border-radius:10px;padding:12px 10px 8px"><svg viewBox="0 0 ${cW} ${cH}" style="width:100%;height:60px;display:block"><defs><linearGradient id="gGrad2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF6B35" stop-opacity="0.35"/><stop offset="100%" stop-color="#FF6B35" stop-opacity="0"/></linearGradient></defs><path d="${cAreaD}" fill="url(#gGrad2)" stroke="none"/><path d="${cPathD}" fill="none" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${cCircles}</svg><div style="display:flex;justify-content:space-between;margin-top:4px"><span style="font-size:10px;color:#9A9A94">처음 ${chartPosts[0]?.progress||0}점</span><span style="font-size:11px;font-weight:700;color:#F4A228">최근 ${chartPosts[chartPosts.length-1]?.progress||0}점</span></div></div></section>`;
+      }
       const tcPost = studentPosts.find(p => p.teacherComment);
       const teacherHtml = tcPost ? `<section><h3>👩\u200d🏫 선생님 한마디</h3><p style="font-style:italic;color:#1B5E20;background:#F1F8F0;padding:10px 14px;border-radius:8px;border-left:3px solid #4CAF50;margin:0">"${tcPost.teacherComment}"</p></section>` : "";
-      const allPhotos = studentPosts.flatMap(p => (p.mediaList||[]).filter(m => !m.type?.startsWith("video"))).slice(0,6);
+      const tagGroups2 = {}; studentPosts.slice().reverse().forEach(p => { const ms=(p.mediaList||[]).filter(m=>!m.type?.startsWith("video")); if(ms.length && !tagGroups2[p.tag]) tagGroups2[p.tag]=ms[0]; });
+      let allPhotos = Object.values(tagGroups2).slice(0,6);
+      if (allPhotos.length < 6) { const rest = studentPosts.flatMap(p => (p.mediaList||[]).filter(m=>!m.type?.startsWith("video"))).filter(m=>!allPhotos.includes(m)); allPhotos = [...allPhotos, ...rest].slice(0,6); }
       const photoHtml = allPhotos.length ? `<section><h3>📸 대표 사진</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${allPhotos.map(m => `<img src="${m.url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px" alt=""/>`).join("")}</div></section>` : "";
       const dreamStr = detailResume?.strengths?.[0] || "";
       const dreamHtml = dreamStr ? `<section style="background:#FFFBEE;border-color:#F4A22844"><h3>🌟 나의 꿈</h3><p style="font-size:15px;font-weight:700;color:#1A1F36;margin:0">${dreamStr}</p></section>` : "";
+      const persona = calcPersonaLine(studentPosts);
+      const personaHtml = persona ? `<div style="background:linear-gradient(135deg,#1A1F36,#2D3454);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">✨</span><div><div style="font-size:9px;color:#9FA8DA;font-weight:700;margin-bottom:2px;letter-spacing:0.5px">직무 적합도 한 줄 평</div><div style="font-size:13px;font-weight:700;color:#fff">${persona}</div></div></div>` : "";
+      const highlights = pickHighlightComments(studentPosts, 2);
+      const commentHtml = highlights.length ? `<section><h3>💬 친구들에게 받은 응원</h3>${highlights.map(c => `<div style="background:#FFF3E0;border-radius:9px;padding:8px 12px;margin-bottom:5px;font-size:12px;color:#5A3010;line-height:1.6"><span style="font-weight:700">${c.from}</span>: \u201C${c.text}\u201D</div>`).join("")}</section>` : "";
       const w = window.open("", "_blank", "width=600,height=900");
       w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${s.name} 포트폴리오</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans KR',sans-serif;padding:24px;max-width:480px;margin:0 auto;color:#1A1F36}h2{color:#1A1F36;margin:0 0 4px}section{margin-bottom:20px;padding:16px;border:1px solid #E8E8E4;border-radius:14px}h3{font-size:14px;font-weight:700;color:#1A1F36;margin:0 0 10px}@media print{.no-print{display:none}}</style></head><body>
       <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #FF6B3533">
@@ -3047,7 +3099,7 @@ function App() {
           <div style="text-align:center"><div style="font-size:20px;font-weight:900;color:#2D6A4F">${avgProgress}</div><div style="font-size:11px;color:#9A9A94">평균 숙련도</div></div>
         </div>
       </div>
-      ${resumeHtml ? `<section><h3>📝 자기소개서</h3>${resumeHtml}</section>` : ""}
+      ${personaHtml}\n      ${resumeHtml ? `<section><h3>📝 자기소개서</h3>${resumeHtml}</section>` : ""}\n      ${commentHtml}
       ${earnedBadges.length ? `<section><h3>🏅 달성 배지</h3><div>${badgeHtml}</div></section>` : ""}
       ${skillHtml ? `<section><h3>📊 직무별 숙련도</h3>${skillHtml}</section>` : ""}
       ${growthHtml}\n      ${teacherHtml}\n      ${photoHtml}\n      ${dreamHtml}\n      <button class="no-print" onclick="window.print()" style="width:100%;padding:14px;background:#FF6B35;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px">🖨️ PDF로 저장하기</button>
@@ -7597,7 +7649,7 @@ function App() {
           borderRadius: 3
         }
       })));
-    })), myPosts.length >= 2 && /*#__PURE__*/React.createElement("div",{style:{marginBottom:12}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:12,fontWeight:700,color:C.navy,marginBottom:8}},"\uD83D\uDCC8 \uC219\uB828\uB3C4 \uC131\uC7A5 \uD754\uC801"), /*#__PURE__*/React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,background:C.g100,borderRadius:10,padding:"10px 14px"}}, /*#__PURE__*/React.createElement("div",{style:{flex:1,textAlign:"center"}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:C.g400,marginBottom:3}},"\uCC98\uC74C"), /*#__PURE__*/React.createElement("div",{style:{fontSize:22,fontWeight:900,color:C.g400}},myPosts[myPosts.length-1]?.progress||0,"\uC810")), /*#__PURE__*/React.createElement("div",{style:{fontSize:20,color:C.gold}},"\u2192"), /*#__PURE__*/React.createElement("div",{style:{flex:1,textAlign:"center"}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:11,color:C.primary,marginBottom:3}},"\uCD5C\uADFC"), /*#__PURE__*/React.createElement("div",{style:{fontSize:22,fontWeight:900,color:C.primary}},myPosts[0]?.progress||0,"\uC810")))), (()=>{const tc=myPosts.find(p=>p.teacherComment);return tc?/*#__PURE__*/React.createElement("div",{style:{background:"#F1F8F0",borderRadius:10,padding:"10px 12px",marginBottom:10,border:"1px solid #C8E6C9"}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"#2E7D32",marginBottom:4}},"\uD83D\uDC69\u200D\uD83C\uDFEB \uC120\uC0DD\uB2D8 \uD55C\uB9C8\uB514"), /*#__PURE__*/React.createElement("div",{style:{fontSize:12,color:"#1B5E20",lineHeight:1.7,fontStyle:"italic"}},"\u201C",tc.teacherComment,"\u201D")):null;})(), (()=>{const photos=myPosts.flatMap(p=>(p.mediaList||[]).filter(m=>!m.type?.startsWith("video"))).slice(0,6);return photos.length>0?/*#__PURE__*/React.createElement("div",{style:{marginBottom:10}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:12,fontWeight:700,color:C.navy,marginBottom:8}},"\uD83D\uDCF8 \uB300\uD45C \uC0AC\uC9C4"), /*#__PURE__*/React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}, photos.map((m,i)=>/*#__PURE__*/React.createElement("div",{key:i,style:{paddingTop:"100%",position:"relative",borderRadius:8,overflow:"hidden",background:C.g100}}, /*#__PURE__*/React.createElement("img",{src:m.url,alt:"",style:{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}))))):null;})(), resumeStrengths.length>0&&/*#__PURE__*/React.createElement("div",{style:{background:C.gold+"15",borderRadius:10,padding:"10px 14px",marginBottom:4,border:"1px solid "+C.gold+"44",display:"flex",alignItems:"center",gap:8}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:18}},"\uD83C\uDF1F"), /*#__PURE__*/React.createElement("div",null, /*#__PURE__*/React.createElement("div",{style:{fontSize:10,color:"#B8860B",fontWeight:700,marginBottom:2}},"\uB098\uC758 \uAF2C"), /*#__PURE__*/React.createElement("div",{style:{fontSize:13,fontWeight:700,color:C.navy}},resumeStrengths[0]))), ), /*#__PURE__*/React.createElement("button", {
+    })), (()=>{const chartPosts=myPosts.slice().reverse().slice(-10);if(chartPosts.length<2)return null;const W=260,H=70,pad=8;const pts=chartPosts.map((p,i)=>({x:pad+(i/(chartPosts.length-1))*(W-pad*2),y:H-pad-((p.progress||0)/100)*(H-pad*2)}));const pathD=pts.map((pt,i)=>(i===0?"M":"L")+pt.x.toFixed(1)+","+pt.y.toFixed(1)).join(" ");const areaD=pathD+` L${pts[pts.length-1].x.toFixed(1)},${H-pad} L${pts[0].x.toFixed(1)},${H-pad} Z`;return /*#__PURE__*/React.createElement("div",{style:{marginBottom:12}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:12,fontWeight:700,color:C.navy,marginBottom:8}},"\uD83D\uDCC8 \uC219\uB828\uB3C4 \uC131\uC7A5 \uADF8\uB798\uD53C"), /*#__PURE__*/React.createElement("div",{style:{background:C.g100,borderRadius:10,padding:"12px 10px 8px"}}, /*#__PURE__*/React.createElement("svg",{viewBox:`0 0 ${W} ${H}`,style:{width:"100%",height:60,display:"block"}}, /*#__PURE__*/React.createElement("defs",null,/*#__PURE__*/React.createElement("linearGradient",{id:"gGrad",x1:"0",y1:"0",x2:"0",y2:"1"}, /*#__PURE__*/React.createElement("stop",{offset:"0%",stopColor:C.primary,stopOpacity:0.35}), /*#__PURE__*/React.createElement("stop",{offset:"100%",stopColor:C.primary,stopOpacity:0}))), /*#__PURE__*/React.createElement("path",{d:areaD,fill:"url(#gGrad)",stroke:"none"}), /*#__PURE__*/React.createElement("path",{d:pathD,fill:"none",stroke:C.primary,strokeWidth:2.5,strokeLinecap:"round",strokeLinejoin:"round"}), pts.map((pt,i)=>/*#__PURE__*/React.createElement("circle",{key:i,cx:pt.x,cy:pt.y,r:i===pts.length-1?4:2.5,fill:i===pts.length-1?C.gold:C.primary}))), /*#__PURE__*/React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginTop:4}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:10,color:C.g400}},"\uCC98\uC74C ",chartPosts[0]?.progress||0,"\uC810"), /*#__PURE__*/React.createElement("span",{style:{fontSize:11,fontWeight:700,color:C.gold}},"\uCD5C\uADFC ",chartPosts[chartPosts.length-1]?.progress||0,"\uC810")))); })(), (()=>{const tc=myPosts.find(p=>p.teacherComment);return tc?/*#__PURE__*/React.createElement("div",{style:{background:"#F1F8F0",borderRadius:10,padding:"10px 12px",marginBottom:10,border:"1px solid #C8E6C9"}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:11,fontWeight:700,color:"#2E7D32",marginBottom:4}},"\uD83D\uDC69\u200D\uD83C\uDFEB \uC120\uC0DD\uB2D8 \uD55C\uB9C8\uB514"), /*#__PURE__*/React.createElement("div",{style:{fontSize:12,color:"#1B5E20",lineHeight:1.7,fontStyle:"italic"}},"\u201C",tc.teacherComment,"\u201D")):null;})(), (()=>{const tagGroups={};myPosts.slice().reverse().forEach(p=>{const ms=(p.mediaList||[]).filter(m=>!m.type?.startsWith("video"));if(ms.length&&!tagGroups[p.tag])tagGroups[p.tag]=ms[0];});let photos=Object.values(tagGroups).slice(0,6);if(photos.length<6){const rest=myPosts.flatMap(p=>(p.mediaList||[]).filter(m=>!m.type?.startsWith("video"))).filter(m=>!photos.includes(m));photos=[...photos,...rest].slice(0,6);}return photos.length>0?/*#__PURE__*/React.createElement("div",{style:{marginBottom:10}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:12,fontWeight:700,color:C.navy,marginBottom:8}},"\uD83D\uDCF8 \uB300\uD45C \uC0AC\uC9C4"), /*#__PURE__*/React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}, photos.map((m,i)=>/*#__PURE__*/React.createElement("div",{key:i,style:{paddingTop:"100%",position:"relative",borderRadius:8,overflow:"hidden",background:C.g100}}, /*#__PURE__*/React.createElement("img",{src:m.url,alt:"",style:{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}))))):null;})(), (()=>{const persona=calcPersonaLine(myPosts);return persona?/*#__PURE__*/React.createElement("div",{style:{background:"linear-gradient(135deg,#1A1F36,#2D3454)",borderRadius:10,padding:"12px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:20}},"\u2728"), /*#__PURE__*/React.createElement("div",null, /*#__PURE__*/React.createElement("div",{style:{fontSize:9,color:"#9FA8DA",fontWeight:700,marginBottom:2,letterSpacing:0.5}},"\uC9C1\uBB34 \uC801\uD569\uB3C4 \uD55C \uC904 \uD3C9"), /*#__PURE__*/React.createElement("div",{style:{fontSize:13,fontWeight:700,color:"#fff"}},persona))):null;})(), (()=>{const hl=pickHighlightComments(myPosts,2);return hl.length>0?/*#__PURE__*/React.createElement("div",{style:{marginBottom:10}}, /*#__PURE__*/React.createElement("div",{style:{fontSize:12,fontWeight:700,color:C.navy,marginBottom:6}},"\uD83D\uDCAC \uCE5C\uAD6C\uB4E4\uC5D0\uAC8C\u0020\uBC1B\uC740\u0020\uC751\uC6D0"), hl.map((c,i)=>/*#__PURE__*/React.createElement("div",{key:i,style:{background:"#FFF3E0",borderRadius:9,padding:"8px 12px",marginBottom:5,fontSize:12,color:"#5A3010",lineHeight:1.6}}, /*#__PURE__*/React.createElement("span",{style:{fontWeight:700}},c.from),": \u201C",c.text,"\u201D"))):null;})(), resumeStrengths.length>0&&/*#__PURE__*/React.createElement("div",{style:{background:C.gold+"15",borderRadius:10,padding:"10px 14px",marginBottom:4,border:"1px solid "+C.gold+"44",display:"flex",alignItems:"center",gap:8}}, /*#__PURE__*/React.createElement("span",{style:{fontSize:18}},"\uD83C\uDF1F"), /*#__PURE__*/React.createElement("div",null, /*#__PURE__*/React.createElement("div",{style:{fontSize:10,color:"#B8860B",fontWeight:700,marginBottom:2}},"\uB098\uC758 \uAF2C"), /*#__PURE__*/React.createElement("div",{style:{fontSize:13,fontWeight:700,color:C.navy}},resumeStrengths[0]))), ), /*#__PURE__*/React.createElement("button", {
       className: "btn",
       onClick: () => {
         const content = document.getElementById("pdf-content").innerHTML;
