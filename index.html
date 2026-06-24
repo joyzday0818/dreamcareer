@@ -1819,7 +1819,7 @@ function App() {
       commentList: newList
     });
   };
-  const handleLoveSend = p => {
+  const handleLoveSend = (p, msg) => {
     setLoved(v => ({
       ...v,
       [p.id]: true
@@ -1827,10 +1827,12 @@ function App() {
     setLoveModal(null);
     toast(`💌 ${p.name} 학생에게 러브콜을 보냈어요!`);
     const now = Date.now();
+    const finalMsg = (msg || "").trim() || `귀하의 ${(p.tag||"").replace("#","")} 역량에 관심을 가지고 있습니다.`;
     const callData = {
       from: currentUser?.name || "기업담당자",
       tag: p.tag,
       postId: p.id,
+      message: finalMsg,
       createdAt: now,
       time: new Date().toLocaleString("ko-KR", {
         month: "numeric",
@@ -1848,6 +1850,7 @@ function App() {
         studentSchool: p.school || "",
         tag: p.tag,
         desc: p.desc || "",
+        message: finalMsg,
         sentAt: now,
         time: new Date().toLocaleString("ko-KR", {
           month: "numeric",
@@ -2318,7 +2321,132 @@ function App() {
       fontWeight: 900,
       boxShadow: "0 5px 18px rgba(255,107,53,0.32)"
     }
-  }, "\uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uC2DC\uC791\uD558\uAE30 \u2192"))), /*#__PURE__*/React.createElement("button", {
+  }, "\uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uC2DC\uC791\uD558\uAE30 \u2192"))), !companyFormVisible ? /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setCompanyFormVisible(true),
+    style: {
+      width: "100%",
+      background: C.white,
+      borderRadius: 18,
+      padding: "15px 18px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+      display: "flex",
+      alignItems: "center",
+      gap: 14,
+      border: `2px solid ${C.accent}22`
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 22
+    }
+  }, "\uD83C\uDFE2"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      textAlign: "left"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, "\uAE30\uC5C5 \uB2F4\uB2F9\uC790\uB85C \uC2DC\uC791\uD558\uAE30"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.g400
+    }
+  }, "\uC778\uC7AC\uB97C \uBC1C\uACAC\uD558\uACE0 \uB7EC\uBE0C\uCF5C\uC744 \uBCF4\uB0B4\uC694")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: C.g400,
+      fontSize: 18
+    }
+  }, "\u203A")) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: C.white,
+      borderRadius: 18,
+      padding: "18px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+      border: `2px solid ${C.accent}33`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 20
+    }
+  }, "\uD83C\uDFE2"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 15,
+      fontWeight: 700,
+      color: C.navy
+    }
+  }, "\uAE30\uC5C5 \uB2F4\uB2F9\uC790 \uAC00\uC785")), /*#__PURE__*/React.createElement("input", {
+    placeholder: "\u270F\uFE0F \uB2F4\uB2F9\uC790 \uC774\uB984  \uC608) (\uC8FC)\uD640\uD2B8\uC2DD\uD488",
+    value: companyFormName,
+    onChange: e => setCompanyFormName(e.target.value),
+    style: {
+      width: "100%",
+      border: `1.5px solid ${companyFormName ? C.accent : C.g200}`,
+      borderRadius: 12,
+      padding: "11px 13px",
+      fontSize: 14,
+      color: C.navy,
+      outline: "none",
+      marginBottom: 10,
+      background: C.g100
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      if (!companyFormName.trim()) {
+        toast("✏️ 이름을 입력해주세요!");
+        return;
+      }
+      const compUser = {
+        id: "co" + Date.now(),
+        name: companyFormName.trim(),
+        role: "company"
+      };
+      setCurrentUser(compUser);
+      setUserType("company");
+      setScreen("main");
+      toast(`🏢 환영해요, ${compUser.name}님!`);
+    },
+    style: {
+      flex: 1,
+      padding: "12px",
+      borderRadius: 12,
+      border: "none",
+      background: `linear-gradient(135deg,${C.accent},#52B788)`,
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: 900
+    }
+  }, "\uC785\uC7A5\uD558\uAE30 \u2192"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setCompanyFormVisible(false);
+      setCompanyFormName("");
+    },
+    style: {
+      padding: "12px 14px",
+      borderRadius: 12,
+      border: `1px solid ${C.g200}`,
+      background: C.white,
+      color: C.g600,
+      fontSize: 13
+    }
+  }, "\uCDE8\uC18C"))), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
       setUserType("guest");
@@ -2480,131 +2608,6 @@ function App() {
     onClick: () => {
       setTeacherFormVisible(false);
       setTeacherName("");
-    },
-    style: {
-      padding: "12px 14px",
-      borderRadius: 12,
-      border: `1px solid ${C.g200}`,
-      background: C.white,
-      color: C.g600,
-      fontSize: 13
-    }
-  }, "\uCDE8\uC18C"))), !companyFormVisible ? /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => setCompanyFormVisible(true),
-    style: {
-      width: "100%",
-      background: C.white,
-      borderRadius: 18,
-      padding: "15px 18px",
-      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-      display: "flex",
-      alignItems: "center",
-      gap: 14,
-      border: `2px solid ${C.accent}22`
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 22
-    }
-  }, "\uD83C\uDFE2"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      textAlign: "left"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 14,
-      fontWeight: 700,
-      color: C.navy
-    }
-  }, "\uAE30\uC5C5 \uB2F4\uB2F9\uC790\uB85C \uC2DC\uC791\uD558\uAE30"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: C.g400
-    }
-  }, "\uC778\uC7AC\uB97C \uBC1C\uACAC\uD558\uACE0 \uB7EC\uBE0C\uCF5C\uC744 \uBCF4\uB0B4\uC694")), /*#__PURE__*/React.createElement("span", {
-    style: {
-      color: C.g400,
-      fontSize: 18
-    }
-  }, "\u203A")) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: C.white,
-      borderRadius: 18,
-      padding: "18px",
-      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-      border: `2px solid ${C.accent}33`
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      marginBottom: 14
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 20
-    }
-  }, "\uD83C\uDFE2"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 15,
-      fontWeight: 700,
-      color: C.navy
-    }
-  }, "\uAE30\uC5C5 \uB2F4\uB2F9\uC790 \uAC00\uC785")), /*#__PURE__*/React.createElement("input", {
-    placeholder: "\u270F\uFE0F \uB2F4\uB2F9\uC790 \uC774\uB984  \uC608) (\uC8FC)\uD640\uD2B8\uC2DD\uD488",
-    value: companyFormName,
-    onChange: e => setCompanyFormName(e.target.value),
-    style: {
-      width: "100%",
-      border: `1.5px solid ${companyFormName ? C.accent : C.g200}`,
-      borderRadius: 12,
-      padding: "11px 13px",
-      fontSize: 14,
-      color: C.navy,
-      outline: "none",
-      marginBottom: 10,
-      background: C.g100
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => {
-      if (!companyFormName.trim()) {
-        toast("✏️ 이름을 입력해주세요!");
-        return;
-      }
-      const compUser = {
-        id: "co" + Date.now(),
-        name: companyFormName.trim(),
-        role: "company"
-      };
-      setCurrentUser(compUser);
-      setUserType("company");
-      setScreen("main");
-      toast(`🏢 환영해요, ${compUser.name}님!`);
-    },
-    style: {
-      flex: 1,
-      padding: "12px",
-      borderRadius: 12,
-      border: "none",
-      background: `linear-gradient(135deg,${C.accent},#52B788)`,
-      color: "#fff",
-      fontSize: 14,
-      fontWeight: 900
-    }
-  }, "\uC785\uC7A5\uD558\uAE30 \u2192"), /*#__PURE__*/React.createElement("button", {
-    className: "btn",
-    onClick: () => {
-      setCompanyFormVisible(false);
-      setCompanyFormName("");
     },
     style: {
       padding: "12px 14px",
@@ -6215,7 +6218,17 @@ function App() {
         WebkitLineClamp: 2,
         WebkitBoxOrient: "vertical"
       }
-    }, lc.desc), /*#__PURE__*/React.createElement("div", {
+    }, lc.desc), lc.message && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: "#B8860B",
+        background: "#FFF8E1",
+        borderRadius: 8,
+        padding: "5px 8px",
+        marginTop: 4,
+        fontStyle: "italic"
+      }
+    }, "\uD83D\uDCAC \u201C", lc.message, "\u201D"), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 10,
         color: C.g400,
@@ -8242,6 +8255,8 @@ function LoveModal({
   const m = JOB_META[post.tag] || {
     color: C.primary
   };
+  const [msg, setMsg] = React.useState("");
+  const placeholder = `귀하의 ${(post.tag||"").replace("#","")} 역량에 관심을 가지고 있습니다.`;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
@@ -8281,21 +8296,44 @@ function LoveModal({
     }
   }, post.name, " \uD559\uC0DD\uC5D0\uAC8C", /*#__PURE__*/React.createElement("br", null), "\uB7EC\uBE0C\uCF5C \uBCF4\uB0B4\uAE30")), /*#__PURE__*/React.createElement("div", {
     style: {
-      background: C.soft,
-      borderRadius: 14,
-      padding: "13px 15px",
-      marginBottom: 16,
-      fontSize: 13,
+      fontSize: 12,
+      fontWeight: 700,
       color: C.g600,
-      lineHeight: 1.65
+      marginBottom: 7,
+      display: "flex",
+      alignItems: "center",
+      gap: 6
     }
-  }, "\uD83D\uDCCB \uADC0\uD558\uC758 ", /*#__PURE__*/React.createElement("strong", {
+  }, "\uD83D\uDCAC ", /*#__PURE__*/React.createElement("strong", {
+    style: { color: m.color }
+  }, post.tag?.replace("#", "")), " \uD559\uC0DD\uC5D0\uAC8C \uC804\uD560 \uC751\uC6D0 \uB9D8\uC2A4\uC9C0\uB97C \uC9C1\uC811 \uC791\uC131\uD574\uC8FC\uC138\uC694"), /*#__PURE__*/React.createElement("textarea", {
+    value: msg,
+    onChange: e => setMsg(e.target.value),
+    placeholder: placeholder,
+    rows: 4,
     style: {
-      color: m.color
+      width: "100%",
+      border: `1.5px solid ${msg ? m.color : C.g200}`,
+      borderRadius: 14,
+      padding: "12px 14px",
+      fontSize: 13,
+      color: C.navy,
+      outline: "none",
+      background: C.g100,
+      lineHeight: 1.6,
+      resize: "none",
+      marginBottom: 6,
+      fontFamily: "inherit"
     }
-  }, post.tag?.replace("#", "")), " \uC5ED\uB7C9\uC5D0 \uAD00\uC2EC\uC744 \uAC00\uC9C0\uACE0 \uC788\uC2B5\uB2C8\uB2E4."), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.g400,
+      marginBottom: 16
+    }
+  }, "\uD83D\uDCA1 \uBE44\uC6CC\uB3D4\uBA74 \uC704 \uC608\uC2DC \uBB38\uAD6C\uAC00 \uADF8\uB300\uB85C \uC804\uC1A1\uB418\uC5B4\uC694"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
-    onClick: () => onSend(post),
+    onClick: () => onSend(post, msg),
     style: {
       width: "100%",
       padding: "16px",
