@@ -1163,6 +1163,7 @@ function App() {
   const [showUserMgmt, setShowUserMgmt] = useState(false);
   const [allLovecalls, setAllLovecalls] = useState([]);
   const [showLovecallMgmt, setShowLovecallMgmt] = useState(false);
+  const [lovecallView, setLovecallView] = useState("student");
 
   // useEffect보다 먼저 정의해야 TDZ 오류 없음
   const isAdmin = !!(currentUser?.name?.trim().includes("전예원") && userType === "student");
@@ -6859,159 +6860,140 @@ function App() {
       transition: "transform .2s"
     }
   }, "\u203A")), showLovecallMgmt && (() => {
-    // 학생별 러브콜 집계
+    // 학생별 / 기업별 집계
     const studentMap = {};
+    const companyMap = {};
     allLovecalls.forEach(lc => {
       const student = posts.find(p => p.userId === lc.toUserId);
       const name = student?.name || lc.toUserId;
-      if (!studentMap[lc.toUserId]) studentMap[lc.toUserId] = {
-        name,
-        calls: []
-      };
+      if (!studentMap[lc.toUserId]) studentMap[lc.toUserId] = { name, calls: [] };
       studentMap[lc.toUserId].calls.push(lc);
+      const company = lc.from || "익명 기업";
+      if (!companyMap[company]) companyMap[company] = { name: company, calls: [] };
+      companyMap[company].calls.push(lc);
     });
-    const sorted = Object.values(studentMap).sort((a, b) => b.calls.length - a.calls.length);
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: C.g100,
-        borderRadius: "0 0 14px 14px",
-        padding: "10px 8px",
-        marginBottom: 8
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gap: 6,
-        marginBottom: 10
-      }
-    }, [["💌", "총 러브콜", allLovecalls.length + "건", C.gold], ["👥", "받은 학생", [...new Set(allLovecalls.map(l => l.toUserId))].length + "명", "#1565C0"], ["🏢", "보낸 기업", [...new Set(allLovecalls.map(l => l.from))].length + "곳", C.accent]].map(([ic, lb, vl, cl]) => /*#__PURE__*/React.createElement("div", {
-      key: lb,
-      style: {
-        background: C.white,
-        borderRadius: 10,
-        padding: "10px 6px",
-        textAlign: "center"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 16
-      }
-    }, ic), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 14,
-        fontWeight: 900,
-        color: cl,
-        marginTop: 2
-      }
-    }, vl), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 9,
-        color: C.g400
-      }
-    }, lb)))), sorted.length === 0 && /*#__PURE__*/React.createElement("div", {
-      style: {
-        textAlign: "center",
-        padding: "16px",
-        color: C.g400,
-        fontSize: 13
-      }
-    }, "\uB7EC\uBE0C\uCF5C\uC774 \uC5C6\uC5B4\uC694"), sorted.map((st, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      style: {
-        background: C.white,
-        borderRadius: 12,
-        padding: "12px",
-        marginBottom: 6
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 8
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 13,
-        fontWeight: 700,
-        color: C.navy
-      }
-    }, st.name), /*#__PURE__*/React.createElement("span", {
-      style: {
-        background: "#FFF3E0",
-        color: C.gold,
-        borderRadius: 8,
-        padding: "3px 9px",
-        fontSize: 12,
-        fontWeight: 700
-      }
-    }, "\uD83D\uDC8C ", st.calls.length, "\uAC74")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        flexDirection: "column",
-        gap: 5
-      }
-    }, st.calls.map((c, j) => {
-      const m = JOB_META[c.tag] || {
-        color: C.primary,
-        emoji: "✨"
-      };
+    const sortedStudents = Object.values(studentMap).sort((a, b) => b.calls.length - a.calls.length);
+    const sortedCompanies = Object.values(companyMap).sort((a, b) => b.calls.length - a.calls.length);
+
+    // 기업 → 학생 연결 (흐름도용, 최근 12건)
+    const links = allLovecalls.slice(0, 12).map(lc => {
+      const student = posts.find(p => p.userId === lc.toUserId);
+      return { company: lc.from || "익명 기업", student: student?.name || lc.toUserId, tag: lc.tag };
+    });
+    const linkCompanies = [...new Set(links.map(l => l.company))];
+    const linkStudents = [...new Set(links.map(l => l.student))];
+
+    const callRow = (c, j) => {
+      const m = JOB_META[c.tag] || { color: C.primary, emoji: "✨" };
       return /*#__PURE__*/React.createElement("div", {
         key: j,
-        style: {
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          background: C.g100,
-          borderRadius: 8,
-          padding: "6px 10px"
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 13
-        }
-      }, m.emoji), /*#__PURE__*/React.createElement("div", {
-        style: {
-          flex: 1,
-          minWidth: 0
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 12,
-          fontWeight: 600,
-          color: C.navy
-        }
-      }, c.from), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 11,
-          color: C.g400
-        }
-      }, " \xB7 ", c.tag?.replace("#", ""))), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          color: C.g400,
-          flexShrink: 0
-        }
-      }, c.time || ""), /*#__PURE__*/React.createElement("button", {
-        className: "btn",
-        onClick: async () => {
-          await FB.remove(`lovecalls/${c.toUserId}/${c.id}`);
-          setAllLovecalls(prev => prev.filter(x => x.id !== c.id));
-          toast("🗑️ 러브콜 기록이 삭제됐어요.");
+        style: { background: C.white, borderRadius: 9, padding: "8px 10px", marginBottom: 5 }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 13 } }, m.emoji),
+          /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 12, fontWeight: 600, color: C.navy } },
+              lovecallView === "student" ? c.from : (posts.find(p => p.userId === c.toUserId)?.name || c.toUserId)
+            ),
+            /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, color: C.g400 } }, " \u00B7 ", c.tag?.replace("#", ""))
+          ),
+          /*#__PURE__*/React.createElement("span", { style: { fontSize: 10, color: C.g400, flexShrink: 0 } }, c.time || ""),
+          /*#__PURE__*/React.createElement("button", {
+            className: "btn",
+            onClick: async () => {
+              await FB.remove(`lovecalls/${c.toUserId}/${c.id}`);
+              setAllLovecalls(prev => prev.filter(x => x.id !== c.id));
+              toast("🗑️ 러브콜 기록이 삭제됐어요.");
+            },
+            style: { background: "#FFF5F5", border: "1px solid #FFCDD2", borderRadius: 7, padding: "3px 8px", fontSize: 10, color: "#E53935", fontWeight: 700, flexShrink: 0 }
+          }, "삭제")
+        ),
+        c.message && /*#__PURE__*/React.createElement("div", {
+          style: { fontSize: 11, color: "#B8860B", background: "#FFF8E1", borderRadius: 7, padding: "5px 8px", marginTop: 5, fontStyle: "italic", lineHeight: 1.5 }
+        }, "\uD83D\uDCAC \u201C", c.message, "\u201D")
+      );
+    };
+
+    return /*#__PURE__*/React.createElement("div", {
+      style: { background: C.g100, borderRadius: "0 0 14px 14px", padding: "10px 8px", marginBottom: 8 }
+    },
+      // 통계 3칸
+      /*#__PURE__*/React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 10 } },
+        [["💌", "총 러브콜", allLovecalls.length + "건", C.gold],
+         ["👥", "받은 학생", [...new Set(allLovecalls.map(l => l.toUserId))].length + "명", "#1565C0"],
+         ["🏢", "보낸 기업", [...new Set(allLovecalls.map(l => l.from))].length + "곳", C.accent]
+        ].map(([ic, lb, vl, cl]) => /*#__PURE__*/React.createElement("div", {
+          key: lb, style: { background: C.white, borderRadius: 10, padding: "10px 6px", textAlign: "center" }
         },
-        style: {
-          background: "#FFF5F5",
-          border: "1px solid #FFCDD2",
-          borderRadius: 7,
-          padding: "3px 8px",
-          fontSize: 10,
-          color: "#E53935",
-          fontWeight: 700,
-          flexShrink: 0
-        }
-      }, "\uC0AD\uC81C"));
-    })))));
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 16 } }, ic),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 14, fontWeight: 900, color: cl, marginTop: 2 } }, vl),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 9, color: C.g400 } }, lb)
+        ))
+      ),
+
+      // 흐름도 (기업 → 학생)
+      links.length > 0 && /*#__PURE__*/React.createElement("div", {
+        style: { background: C.white, borderRadius: 12, padding: "12px 10px", marginBottom: 10 }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: C.g600, marginBottom: 8 } }, "🔗 최근 연결 흐름 (기업 → 학생)"),
+        /*#__PURE__*/React.createElement("svg", {
+          viewBox: `0 0 280 ${Math.max(linkCompanies.length, linkStudents.length) * 26 + 10}`,
+          style: { width: "100%", height: Math.max(linkCompanies.length, linkStudents.length) * 26 + 10, display: "block" }
+        },
+          links.map((l, i) => {
+            const ci = linkCompanies.indexOf(l.company);
+            const si = linkStudents.indexOf(l.student);
+            const y1 = ci * 26 + 13;
+            const y2 = si * 26 + 13;
+            const m = JOB_META[l.tag] || { color: C.primary };
+            return /*#__PURE__*/React.createElement("path", {
+              key: i,
+              d: `M70,${y1} C140,${y1} 140,${y2} 210,${y2}`,
+              fill: "none", stroke: m.color, strokeWidth: 1.8, strokeOpacity: 0.45
+            });
+          }),
+          linkCompanies.map((c, i) => /*#__PURE__*/React.createElement("g", { key: "c" + i },
+            /*#__PURE__*/React.createElement("circle", { cx: 70, cy: i * 26 + 13, r: 3.5, fill: C.accent }),
+            /*#__PURE__*/React.createElement("text", { x: 62, y: i * 26 + 17, fontSize: 9, fill: C.navy, textAnchor: "end", fontWeight: 700 }, c.length > 8 ? c.slice(0, 8) + "…" : c)
+          )),
+          linkStudents.map((s, i) => /*#__PURE__*/React.createElement("g", { key: "s" + i },
+            /*#__PURE__*/React.createElement("circle", { cx: 210, cy: i * 26 + 13, r: 3.5, fill: C.gold }),
+            /*#__PURE__*/React.createElement("text", { x: 218, y: i * 26 + 17, fontSize: 9, fill: C.navy, fontWeight: 700 }, s)
+          ))
+        )
+      ),
+
+      // 보기 전환 토글
+      /*#__PURE__*/React.createElement("div", { style: { display: "flex", background: C.white, borderRadius: 10, padding: 3, marginBottom: 8, gap: 3 } },
+        [["student", "👤 학생별"], ["company", "🏢 기업별"]].map(([v, l]) =>
+          /*#__PURE__*/React.createElement("button", {
+            key: v, className: "btn",
+            onClick: () => setLovecallView(v),
+            style: { flex: 1, padding: "7px 4px", borderRadius: 8, border: "none", background: lovecallView === v ? C.navy : "transparent", color: lovecallView === v ? "#fff" : C.g400, fontWeight: 700, fontSize: 12 }
+          }, l)
+        )
+      ),
+
+      // 목록
+      (lovecallView === "student" ? sortedStudents : sortedCompanies).length === 0 &&
+        /*#__PURE__*/React.createElement("div", { style: { textAlign: "center", padding: "16px", color: C.g400, fontSize: 13 } }, "러브콜이 없어요"),
+
+      (lovecallView === "student" ? sortedStudents : sortedCompanies).map((st, i) =>
+        /*#__PURE__*/React.createElement("div", {
+          key: i, style: { background: C.white, borderRadius: 12, padding: "12px", marginBottom: 6 }
+        },
+          /*#__PURE__*/React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 } },
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 13, fontWeight: 700, color: C.navy } },
+              (lovecallView === "company" ? "🏢 " : "") + st.name
+            ),
+            /*#__PURE__*/React.createElement("span", { style: { background: "#FFF3E0", color: C.gold, borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700 } }, "💌 ", st.calls.length, "건")
+          ),
+          /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } },
+            st.calls.map((c, j) => callRow(c, j))
+          )
+        )
+      )
+    );
   })()), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => {
@@ -8306,7 +8288,7 @@ function LoveModal({
     }
   }, "\uD83D\uDCAC ", /*#__PURE__*/React.createElement("strong", {
     style: { color: m.color }
-  }, post.tag?.replace("#", "")), " \uD559\uC0DD\uC5D0\uAC8C \uC804\uD560 \uC751\uC6D0 \uB9D8\uC2A4\uC9C0\uB97C \uC9C1\uC811 \uC791\uC131\uD574\uC8FC\uC138\uC694"), /*#__PURE__*/React.createElement("textarea", {
+  }, post.tag?.replace("#", "")), " \uD559\uC0DD\uC5D0\uAC8C \uC804\uD560 \uC751\uC6D0 \uBA54\uC138\uC9C0\uB97C \uC9C1\uC811 \uC791\uC131\uD574\uC8FC\uC138\uC694"), /*#__PURE__*/React.createElement("textarea", {
     value: msg,
     onChange: e => setMsg(e.target.value),
     placeholder: placeholder,
@@ -8331,7 +8313,7 @@ function LoveModal({
       color: C.g400,
       marginBottom: 16
     }
-  }, "\uD83D\uDCA1 \uBE44\uC6CC\uB3D4\uBA74 \uC704 \uC608\uC2DC \uBB38\uAD6C\uAC00 \uADF8\uB300\uB85C \uC804\uC1A1\uB418\uC5B4\uC694"), /*#__PURE__*/React.createElement("button", {
+  }, "\uD83D\uDCA1 \uBE44\uC6CC\uB450\uBA74 \uC704 \uC608\uC2DC \uBB38\uAD6C\uAC00 \uADF8\uB300\uB85C \uC804\uC1A1\uB418\uC5B4\uC694"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => onSend(post, msg),
     style: {
