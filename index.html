@@ -3128,8 +3128,7 @@ function App() {
       const personaHtml = persona ? `<div style="background:linear-gradient(135deg,#1A1F36,#2D3454);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">✨</span><div><div style="font-size:9px;color:#9FA8DA;font-weight:700;margin-bottom:2px;letter-spacing:0.5px">직무 적합도 한 줄 평</div><div style="font-size:13px;font-weight:700;color:#fff">${persona}</div></div></div>` : "";
       const highlights = pickHighlightComments(studentPosts, 2);
       const commentHtml = highlights.length ? `<section><h3>💬 친구들에게 받은 응원</h3>${highlights.map(c => `<div style="background:#FFF3E0;border-radius:9px;padding:8px 12px;margin-bottom:5px;font-size:12px;color:#5A3010;line-height:1.6"><span style="font-weight:700">${c.from}</span>: \u201C${c.text}\u201D</div>`).join("")}</section>` : "";
-      const w = window.open("", "_blank", "width=600,height=900");
-      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${s.name} 포트폴리오</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans KR',sans-serif;padding:24px;max-width:480px;margin:0 auto;color:#1A1F36}h2{color:#1A1F36;margin:0 0 4px}section{margin-bottom:20px;padding:16px;border:1px solid #E8E8E4;border-radius:14px}h3{font-size:14px;font-weight:700;color:#1A1F36;margin:0 0 10px}@media print{.no-print{display:none}}</style></head><body>
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${s.name} 포트폴리오</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans KR',sans-serif;padding:24px;max-width:480px;margin:0 auto;color:#1A1F36}h2{color:#1A1F36;margin:0 0 4px}section{margin-bottom:20px;padding:16px;border:1px solid #E8E8E4;border-radius:14px}h3{font-size:14px;font-weight:700;color:#1A1F36;margin:0 0 10px}@media print{.no-print{display:none}}</style></head><body>
       <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #FF6B3533">
         ${s.profilePic ? `<img src="${s.profilePic}" style="width:72px;height:72px;object-fit:cover;border-radius:50%;margin:0 auto 10px;display:block;border:3px solid #FF6B3533" alt=""/>` : `<div style="font-size:42px;margin-bottom:10px">${s.avatar || "👤"}</div>`}
         <h2>${s.name}</h2><p style="color:#9A9A94;margin:0;font-size:13px">${s.school || ""}</p>
@@ -3143,8 +3142,11 @@ function App() {
       ${earnedBadges.length ? `<section><h3>🏅 달성 배지</h3><div>${badgeHtml}</div></section>` : ""}
       ${skillHtml ? `<section><h3>📊 직무별 숙련도</h3>${skillHtml}</section>` : ""}
       ${growthHtml}\n      ${teacherHtml}\n      ${photoHtml}\n      ${dreamHtml}\n      <button class="no-print" onclick="window.print()" style="width:100%;padding:14px;background:#FF6B35;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px">🖨️ PDF로 저장하기</button>
-      </body></html>`);
-      w.document.close();
+      </body></html>`;
+      const blob = new Blob([htmlContent], {type: "text/html"});
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     };
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -7684,9 +7686,11 @@ function App() {
       className: "btn",
       onClick: () => {
         const content = document.getElementById("pdf-content").innerHTML;
-      const w = window.open("", "_blank", "width=600,height=800");
-        w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${currentUser?.name} 포트폴리오</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans KR',sans-serif;padding:20px;max-width:500px;margin:0 auto}@media print{button{display:none}}</style></head><body>${content}<br/><button onclick="window.print()" style="width:100%;padding:14px;background:#FF6B35;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">🖨️ PDF로 저장하기</button></body></html>`);
-        w.document.close();
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${currentUser?.name} 포트폴리오</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans KR',sans-serif;padding:20px;max-width:500px;margin:0 auto}@media print{button{display:none}}</style></head><body>${content}<br/><button onclick="window.print()" style="width:100%;padding:14px;background:#FF6B35;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">🖨️ PDF로 저장하기</button></body></html>`;
+        const blob = new Blob([htmlContent], {type: "text/html"});
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
       },
       style: {
         width: "100%",
