@@ -1864,6 +1864,13 @@ function App() {
       setSentLovecalls(prev => [sentData, ...prev]);
     }
   };
+  const openLovecallBigScreen = () => {
+    const htmlContent = "<!DOCTYPE html>\n<html lang=\"ko\">\n<head>\n<meta charset=\"UTF-8\"/>\n<title>\ub7ec\ube0c\ucf5c \ud604\ud669 - \ud070 \ud654\uba74</title>\n<style>\n  *{box-sizing:border-box;margin:0;padding:0}\n  body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#FAFAF8;padding:40px;color:#1A1F36}\n  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}\n  h1{font-size:32px;font-weight:900}\n  .sub{font-size:14px;color:#999;margin-top:4px}\n  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px}\n  .stat-box{background:#fff;border-radius:18px;padding:24px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.06)}\n  .stat-box .n{font-size:38px;font-weight:900;color:#FF6B35}\n  .stat-box .l{font-size:14px;color:#999;margin-top:6px}\n  .panel{background:#fff;border-radius:20px;padding:24px;margin-bottom:24px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}\n  .panel h2{font-size:18px;margin-bottom:14px}\n  #updatedAt{font-size:13px;color:#bbb}\n</style>\n</head>\n<body>\n  <div class=\"header\">\n    <div>\n      <h1>\ud83d\udc8c \ub7ec\ube0c\ucf5c \ud604\ud669</h1>\n      <div class=\"sub\">\uae30\uc5c5-\ud559\uc0dd \ub7ec\ube0c\ucf5c \uc8fc\uace0\ubc1b\uae30 \ud604\ud669 (\uc2e4\uc2dc\uac04, 8\ucd08\ub9c8\ub2e4 \uc790\ub3d9 \uac31\uc2e0)</div>\n    </div>\n    <div id=\"updatedAt\"></div>\n  </div>\n\n  <div class=\"stats\">\n    <div class=\"stat-box\"><div class=\"n\" id=\"statTotal\">-</div><div class=\"l\">\ucd1d \ub7ec\ube0c\ucf5c</div></div>\n    <div class=\"stat-box\"><div class=\"n\" id=\"statStudents\">-</div><div class=\"l\">\ubc1b\uc740 \ud559\uc0dd</div></div>\n    <div class=\"stat-box\"><div class=\"n\" id=\"statCompanies\">-</div><div class=\"l\">\ubcf4\ub0b8 \uae30\uc5c5</div></div>\n  </div>\n\n  <div class=\"panel\">\n    <h2>\ud83d\udd17 \uc5f0\uacb0 \ud750\ub984 (\uae30\uc5c5 \u2192 \ud559\uc0dd)</h2>\n    <svg id=\"flowSvg\" style=\"width:100%;display:block\"></svg>\n  </div>\n\n  <div class=\"panel\">\n    <h2>\ud83d\udc64 \ud559\uc0dd\ubcc4 \ubc1b\uc740 \ub7ec\ube0c\ucf5c</h2>\n    <div id=\"studentList\"></div>\n  </div>\n\n<script>\nconst JM = {\n  \"#\ub204\ub8fd\uc9c0\uc0dd\uc0b0\": {\n    color: \"#C17F24\",\n    emoji: \"\ud83c\udf5a\"\n  },\n  \"#\uc6b4\ub3d9\ud654 \uc138\ud0c1\": {\n    color: \"#4527A0\",\n    emoji: \"\ud83d\udc5f\"\n  },\n  \"#\uccad\uc18c\": {\n    color: \"#0277BD\",\n    emoji: \"\ud83e\uddf9\"\n  },\n  \"#\ud2f0\ub9c8\uc2a4\ud130\": {\n    color: \"#00695C\",\n    emoji: \"\ud83e\uded6\"\n  },\n  \"#\uc0b0\uc5c5\uccb4\": {\n    color: \"#37474F\",\n    emoji: \"\ud83c\udfed\"\n  },\n  \"#\uc608\uc220\": {\n    color: \"#AD1457\",\n    emoji: \"\ud83c\udfa8\"\n  },\n  \"#\uc6d0\uc608\uc7ac\ubc30\": {\n    color: \"#2E7D32\",\n    emoji: \"\ud83c\udf31\"\n  },\n  \"#\uc2a4\ud53c\uce58\": {\n    color: \"#6A1B9A\",\n    emoji: \"\ud83c\udfa4\"\n  },\n  \"#\ubc14\ub9ac\uc2a4\ud0c0\": {\n    color: \"#8B4513\",\n    emoji: \"\u2615\"\n  },\n  \"#\ubee5\uacfc\uc790\uc0dd\uc0b0\": {\n    color: \"#D4631A\",\n    emoji: \"\ud83e\uded3\"\n  },\n  \"#\ud720\ub9c8\uc2a4\ud130\": {\n    color: \"#1A5276\",\n    emoji: \"\u267f\"\n  },\n  \"#\uc870\ub9bd\ud3ec\uc7a5\": {\n    color: \"#E65100\",\n    emoji: \"\ud83d\udce6\"\n  },\n  \"#\uc5ec\uac00\ud65c\ub3d9\": {\n    color: \"#0097A7\",\n    emoji: \"\ud83c\udfaf\"\n  }\n};\nconst FB_URL = \"https://dreamcar2r-default-rtdb.asia-southeast1.firebasedatabase.app\";\n\nasync function loadData() {\n  const [postsRes, lcRes] = await Promise.all([\n    fetch(FB_URL + \"/posts.json\"),\n    fetch(FB_URL + \"/lovecalls.json\")\n  ]);\n  const posts = await postsRes.json() || {};\n  const lcData = await lcRes.json() || {};\n  const all = [];\n  Object.entries(lcData).forEach(([userId, calls]) => {\n    Object.entries(calls).forEach(([lcId, c]) => all.push({ ...c, id: lcId, toUserId: userId }));\n  });\n  all.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));\n  return { posts: Object.values(posts), lovecalls: all };\n}\n\nfunction render(data) {\n  const { posts, lovecalls } = data;\n  document.getElementById(\"updatedAt\").textContent = new Date().toLocaleTimeString(\"ko-KR\");\n\n  document.getElementById(\"statTotal\").textContent = lovecalls.length + \"\uac74\";\n  document.getElementById(\"statStudents\").textContent = new Set(lovecalls.map(l=>l.toUserId)).size + \"\uba85\";\n  document.getElementById(\"statCompanies\").textContent = new Set(lovecalls.map(l=>l.from)).size + \"\uacf3\";\n\n  const links = lovecalls.slice(0, 16).map(lc => {\n    const student = posts.find(p => p.userId === lc.toUserId);\n    return { company: lc.from || \"\uc775\uba85 \uae30\uc5c5\", student: student?.name || lc.toUserId, tag: lc.tag };\n  });\n  const linkCompanies = [...new Set(links.map(l => l.company))];\n  const linkStudents = [...new Set(links.map(l => l.student))];\n  const rowH = 46;\n  const svgH = Math.max(linkCompanies.length, linkStudents.length, 1) * rowH + 20;\n  const svg = document.getElementById(\"flowSvg\");\n  svg.setAttribute(\"viewBox\", `0 0 900 ${svgH}`);\n  svg.style.height = svgH + \"px\";\n  let svgHtml = \"\";\n  links.forEach(l => {\n    const ci = linkCompanies.indexOf(l.company);\n    const si = linkStudents.indexOf(l.student);\n    const y1 = ci*rowH + rowH/2 + 10, y2 = si*rowH + rowH/2 + 10;\n    const m = JM[l.tag] || { color: \"#FF6B35\" };\n    svgHtml += `<path d=\"M260,${y1} C450,${y1} 450,${y2} 640,${y2}\" fill=\"none\" stroke=\"${m.color}\" stroke-width=\"3\" stroke-opacity=\"0.45\"/>`;\n  });\n  linkCompanies.forEach((c,i) => {\n    const y = i*rowH + rowH/2 + 10;\n    svgHtml += `<circle cx=\"260\" cy=\"${y}\" r=\"7\" fill=\"#1A1F36\"/>\n      <text x=\"245\" y=\"${y+5}\" font-size=\"18\" fill=\"#1A1F36\" text-anchor=\"end\" font-weight=\"700\">\ud83c\udfe2 ${c}</text>`;\n  });\n  linkStudents.forEach((s,i) => {\n    const y = i*rowH + rowH/2 + 10;\n    svgHtml += `<circle cx=\"640\" cy=\"${y}\" r=\"7\" fill=\"#F4A228\"/>\n      <text x=\"655\" y=\"${y+5}\" font-size=\"18\" fill=\"#1A1F36\" font-weight=\"700\">\ud83d\udc64 ${s}</text>`;\n  });\n  svg.innerHTML = svgHtml;\n\n  const studentMap = {};\n  lovecalls.forEach(lc => {\n    const student = posts.find(p => p.userId === lc.toUserId);\n    const name = student?.name || lc.toUserId;\n    if (!studentMap[lc.toUserId]) studentMap[lc.toUserId] = { name, calls: [] };\n    studentMap[lc.toUserId].calls.push(lc);\n  });\n  const sorted = Object.values(studentMap).sort((a,b) => b.calls.length - a.calls.length);\n  const listEl = document.getElementById(\"studentList\");\n  listEl.innerHTML = sorted.length === 0\n    ? `<div style=\"text-align:center;padding:40px;color:#999;font-size:18px\">\uc544\uc9c1 \ub7ec\ube0c\ucf5c\uc774 \uc5c6\uc5b4\uc694</div>`\n    : sorted.map(st => {\n        const m0 = JM[st.calls[0].tag] || { emoji: \"\u2728\" };\n        const rows = st.calls.map(c => {\n          const m = JM[c.tag] || { emoji: \"\u2728\", color: \"#FF6B35\" };\n          return `<div style=\"background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:6px\">\n            <div style=\"display:flex;align-items:center;gap:10px\">\n              <span style=\"font-size:16px\">${m.emoji}</span>\n              <span style=\"font-weight:700;color:#1A1F36;font-size:15px\">${c.from}</span>\n              <span style=\"color:#999;font-size:13px\">\u00b7 ${c.tag?.replace(\"#\",\"\")}</span>\n              <span style=\"margin-left:auto;color:#999;font-size:12px\">${c.time||\"\"}</span>\n            </div>\n            ${c.message ? `<div style=\"margin-top:6px;font-size:14px;color:#B8860B;background:#FFF8E1;border-radius:7px;padding:6px 10px;font-style:italic\">\ud83d\udcac \"${c.message}\"</div>` : \"\"}\n          </div>`;\n        }).join(\"\");\n        return `<div style=\"background:#F5F5F3;border-radius:16px;padding:16px;margin-bottom:14px\">\n          <div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:10px\">\n            <div style=\"font-size:19px;font-weight:900;color:#1A1F36\">${m0.emoji} ${st.name}</div>\n            <span style=\"background:#FFF3E0;color:#F4A228;border-radius:10px;padding:4px 12px;font-weight:700;font-size:14px\">\ud83d\udc8c ${st.calls.length}\uac74</span>\n          </div>\n          ${rows}\n        </div>`;\n      }).join(\"\");\n}\n\nasync function refresh() {\n  try {\n    const data = await loadData();\n    render(data);\n  } catch(e) {\n    console.error(e);\n  }\n}\n\nrefresh();\nsetInterval(refresh, 8000);\n\n<\/script>\n</body>\n</html>";
+    const blob = new Blob([htmlContent], {type: "text/html"});
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, "_blank");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 300000);
+  };
 
   // isAdmin, isTeacher, isDashboardUser는 상단에서 정의됨
   const allNotifications = [...lovecalls.map(n => ({
@@ -3093,7 +3100,9 @@ function App() {
     const BADGES_DEF = calcBadges(studentPosts, detailResume);
     const earnedBadges = BADGES_DEF.filter(b => b.ok);
     // 학생 프로필 PDF 출력
-    const handleStudentPDF = () => {
+    
+
+  const handleStudentPDF = () => {
       const avgProgress = studentPosts.length ? Math.round(studentPosts.reduce((s, p) => s + (p.progress || 0), 0) / studentPosts.length) : 0;
       const tagSet = [...new Set(studentPosts.map(p => p.tag))];
       const badgeHtml = earnedBadges.map(b => `<span style="background:#F4A22818;border:1px solid #F4A22844;border-radius:12px;padding:4px 10px;font-size:12px;font-weight:600;margin:2px">${b.emoji} ${b.label}</span>`).join("");
@@ -3245,7 +3254,7 @@ function App() {
         color: C.navy,
         whiteSpace: "nowrap"
       }
-    }, "\uD83D\uDCC4 PDF")))), earnedBadges.length > 0 && /*#__PURE__*/React.createElement("div", {
+    }, "\uD83D\uDCC4 \uD3EC\uD2B8\uD3F4\uB9AC\uC624")))), earnedBadges.length > 0 && /*#__PURE__*/React.createElement("div", {
       style: {
         background: "rgba(255,255,255,0.75)",
         borderRadius: 14,
@@ -4451,11 +4460,42 @@ function App() {
         countMap[p.userId].count++;
       });
       const ranked = Object.values(countMap).sort((a,b) => b.count - a.count);
+      const topCount = ranked[0].count;
+      const tiedTop = ranked.filter(r => r.count === topCount);
+      const isTie = tiedTop.length > 1;
       const mvp = ranked[0];
-      const runner = ranked[1] || null;
-      if (!mvp) return null;
+      const runner = !isTie ? (ranked[1] || null) : null;
       const m = JOB_META[mvp.tag] || {color:C.primary, emoji:"\u2728"};
       const mvpPost = posts.find(p => p.userId === mvp.userId);
+
+      const renderPersonRow = (st, idx) => {
+        const mm = JOB_META[st.tag] || {color:C.primary, emoji:"\u2728"};
+        const stPost = posts.find(p => p.userId === st.userId);
+        return /*#__PURE__*/React.createElement("div", {
+          key: st.userId,
+          style: {background:C.white, padding:"12px 16px", display:"flex", alignItems:"center", gap:14, borderTop: idx>0 ? "1px solid "+C.g100 : "none"}
+        },
+          /*#__PURE__*/React.createElement("button", {
+            className:"btn", onClick:()=>{if(stPost) openDetail(stPost);},
+            style:{background:"none",border:"none",padding:0,position:"relative"}
+          },
+            /*#__PURE__*/React.createElement(Av, {src:st.profilePic, emoji:st.avatar, size:50, radius:16, color:mm.color}),
+            /*#__PURE__*/React.createElement("div", {style:{position:"absolute",top:-6,right:-6,fontSize:16}}, "\uD83C\uDFC6")
+          ),
+          /*#__PURE__*/React.createElement("div", {style:{flex:1,minWidth:0}},
+            /*#__PURE__*/React.createElement("button", {
+              className:"btn", onClick:()=>{if(stPost) openDetail(stPost);},
+              style:{background:"none",border:"none",padding:0,fontSize:15,fontWeight:900,color:C.navy,display:"block",textAlign:"left"}
+            }, st.name),
+            /*#__PURE__*/React.createElement("div", {style:{fontSize:10,color:C.g400,marginTop:1}}, st.school),
+            /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:6,marginTop:5}},
+              /*#__PURE__*/React.createElement("span", {style:{background:mm.color+"18",color:mm.color,borderRadius:9,padding:"3px 9px",fontSize:10,fontWeight:700}}, mm.emoji, " ", st.tag?.replace("#","")),
+              /*#__PURE__*/React.createElement("span", {style:{background:C.gold+"20",color:"#B8860B",borderRadius:9,padding:"3px 9px",fontSize:10,fontWeight:700}}, "\uD83D\uDCCB ", st.count, "\uAC1C \uC5C5\uB85C\uB4DC")
+            )
+          )
+        );
+      };
+
       return /*#__PURE__*/React.createElement("div", {
         style: {borderRadius:20, marginBottom:16, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,0.10)"}
       },
@@ -4464,50 +4504,60 @@ function App() {
         },
           /*#__PURE__*/React.createElement("span", {style:{fontSize:20}}, "\uD83C\uDFC6"),
           /*#__PURE__*/React.createElement("div", null,
-            /*#__PURE__*/React.createElement("div", {style:{fontSize:12,fontWeight:900,color:"rgba(255,255,255,0.85)",letterSpacing:1}}, "THIS WEEK MVP"),
-            /*#__PURE__*/React.createElement("div", {style:{fontSize:11,color:"rgba(255,255,255,0.7)"}}, "\uC774\uBC88 \uC8FC \uAC00\uC7A5 \uC5F4\uC2EC\uD788 \uAE30\uB85D\uD55C \uD559\uC0DD")
-          )
-        ),
-        /*#__PURE__*/React.createElement("div", {
-          style: {background:C.white, padding:"14px 16px 16px", display:"flex", alignItems:"center", gap:14}
-        },
-          /*#__PURE__*/React.createElement("button", {
-            className:"btn", onClick:()=>{if(mvpPost) openDetail(mvpPost);},
-            style:{background:"none",border:"none",padding:0,position:"relative"}
-          },
-            /*#__PURE__*/React.createElement(Av, {src:mvp.profilePic, emoji:mvp.avatar, size:60, radius:19, color:m.color}),
-            /*#__PURE__*/React.createElement("div", {style:{position:"absolute",top:-6,right:-6,fontSize:18}}, "\uD83C\uDFC6")
-          ),
-          /*#__PURE__*/React.createElement("div", {style:{flex:1,minWidth:0}},
-            /*#__PURE__*/React.createElement("button", {
-              className:"btn", onClick:()=>{if(mvpPost) openDetail(mvpPost);},
-              style:{background:"none",border:"none",padding:0,fontSize:17,fontWeight:900,color:C.navy,display:"block",textAlign:"left"}
-            }, mvp.name),
-            /*#__PURE__*/React.createElement("div", {style:{fontSize:11,color:C.g400,marginTop:1}}, mvp.school),
-            /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:6,marginTop:6}},
-              /*#__PURE__*/React.createElement("span", {style:{background:m.color+"18",color:m.color,borderRadius:9,padding:"3px 9px",fontSize:11,fontWeight:700}}, m.emoji, " ", mvp.tag?.replace("#","")),
-              /*#__PURE__*/React.createElement("span", {style:{background:C.gold+"20",color:"#B8860B",borderRadius:9,padding:"3px 9px",fontSize:11,fontWeight:700}}, "\uD83D\uDCCB \uC774\uBC88 \uC8FC ", mvp.count, "\uAC1C \uC5C5\uB85C\uB4DC")
+            /*#__PURE__*/React.createElement("div", {style:{fontSize:12,fontWeight:900,color:"rgba(255,255,255,0.85)",letterSpacing:1}},
+              isTie ? `THIS WEEK \uACF5\uB3D9 ${tiedTop.length}\uC778` : "THIS WEEK MVP"
+            ),
+            /*#__PURE__*/React.createElement("div", {style:{fontSize:11,color:"rgba(255,255,255,0.7)"}},
+              isTie ? "\uC774\uBC88 \uC8FC \uAC00\uC7A5 \uC5F4\uC2EC\uD788 \uAE30\uB85D\uD55C \uD559\uC0DD\uB4E4 (\uACF5\uB3D9 1\uC704)" : "\uC774\uBC88 \uC8FC \uAC00\uC7A5 \uC5F4\uC2EC\uD788 \uAE30\uB85D\uD55C \uD559\uC0DD"
             )
           )
         ),
-        runner && /*#__PURE__*/React.createElement("div", {
-          style:{background:"#F8F8F8",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,borderTop:"1px solid "+C.g100}
-        },
-          /*#__PURE__*/React.createElement("span", {style:{fontSize:14}}, "\uD83E\uDD48"),
-          /*#__PURE__*/React.createElement("button", {
-            className:"btn",
-            onClick:()=>{const rp=posts.find(p=>p.userId===runner.userId);if(rp)openDetail(rp);},
-            style:{background:"none",border:"none",padding:0}
-          }, /*#__PURE__*/React.createElement(Av, {src:runner.profilePic, emoji:runner.avatar, size:28, radius:9, color:C.g400})),
-          /*#__PURE__*/React.createElement("div", {style:{flex:1,minWidth:0}},
-            /*#__PURE__*/React.createElement("button", {
-              className:"btn",
-              onClick:()=>{const rp=posts.find(p=>p.userId===runner.userId);if(rp)openDetail(rp);},
-              style:{background:"none",border:"none",padding:0,fontSize:13,fontWeight:700,color:C.g600}
-            }, runner.name),
-            /*#__PURE__*/React.createElement("span", {style:{fontSize:11,color:C.g400,marginLeft:6}}, runner.count, "\uAC1C\uB85C 2\uC704\uC5D0 \uADFC\uC811\uD588\uC5B4\uC694!")
-          )
-        ),
+
+        isTie
+          ? tiedTop.map((st, idx) => renderPersonRow(st, idx))
+          : /*#__PURE__*/React.createElement(React.Fragment, null,
+              /*#__PURE__*/React.createElement("div", {
+                style: {background:C.white, padding:"14px 16px 16px", display:"flex", alignItems:"center", gap:14}
+              },
+                /*#__PURE__*/React.createElement("button", {
+                  className:"btn", onClick:()=>{if(mvpPost) openDetail(mvpPost);},
+                  style:{background:"none",border:"none",padding:0,position:"relative"}
+                },
+                  /*#__PURE__*/React.createElement(Av, {src:mvp.profilePic, emoji:mvp.avatar, size:60, radius:19, color:m.color}),
+                  /*#__PURE__*/React.createElement("div", {style:{position:"absolute",top:-6,right:-6,fontSize:18}}, "\uD83C\uDFC6")
+                ),
+                /*#__PURE__*/React.createElement("div", {style:{flex:1,minWidth:0}},
+                  /*#__PURE__*/React.createElement("button", {
+                    className:"btn", onClick:()=>{if(mvpPost) openDetail(mvpPost);},
+                    style:{background:"none",border:"none",padding:0,fontSize:17,fontWeight:900,color:C.navy,display:"block",textAlign:"left"}
+                  }, mvp.name),
+                  /*#__PURE__*/React.createElement("div", {style:{fontSize:11,color:C.g400,marginTop:1}}, mvp.school),
+                  /*#__PURE__*/React.createElement("div", {style:{display:"flex",alignItems:"center",gap:6,marginTop:6}},
+                    /*#__PURE__*/React.createElement("span", {style:{background:m.color+"18",color:m.color,borderRadius:9,padding:"3px 9px",fontSize:11,fontWeight:700}}, m.emoji, " ", mvp.tag?.replace("#","")),
+                    /*#__PURE__*/React.createElement("span", {style:{background:C.gold+"20",color:"#B8860B",borderRadius:9,padding:"3px 9px",fontSize:11,fontWeight:700}}, "\uD83D\uDCCB \uC774\uBC88 \uC8FC ", mvp.count, "\uAC1C \uC5C5\uB85C\uB4DC")
+                  )
+                )
+              ),
+              runner && /*#__PURE__*/React.createElement("div", {
+                style:{background:"#F8F8F8",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,borderTop:"1px solid "+C.g100}
+              },
+                /*#__PURE__*/React.createElement("span", {style:{fontSize:14}}, "\uD83E\uDD48"),
+                /*#__PURE__*/React.createElement("button", {
+                  className:"btn",
+                  onClick:()=>{const rp=posts.find(p=>p.userId===runner.userId);if(rp)openDetail(rp);},
+                  style:{background:"none",border:"none",padding:0}
+                }, /*#__PURE__*/React.createElement(Av, {src:runner.profilePic, emoji:runner.avatar, size:28, radius:9, color:C.g400})),
+                /*#__PURE__*/React.createElement("div", {style:{flex:1,minWidth:0}},
+                  /*#__PURE__*/React.createElement("button", {
+                    className:"btn",
+                    onClick:()=>{const rp=posts.find(p=>p.userId===runner.userId);if(rp)openDetail(rp);},
+                    style:{background:"none",border:"none",padding:0,fontSize:13,fontWeight:700,color:C.g600}
+                  }, runner.name),
+                  /*#__PURE__*/React.createElement("span", {style:{fontSize:11,color:C.g400,marginLeft:6}}, runner.count, "\uAC1C\uB85C 2\uC704\uC5D0 \uADFC\uC811\uD588\uC5B4\uC694!")
+                )
+              )
+            ),
+
         /*#__PURE__*/React.createElement("div", {
           style:{background:C.gold+"12",padding:"10px 16px",textAlign:"center",fontSize:12,color:"#B8860B",fontWeight:600,borderTop:"1px solid "+C.gold+"22"}
         }, "\uD83D\uDD25 \uAFB8\uC900\uD55C \uAE30\uB85D\uC774 \uCD5C\uACE0\uC758 \uD3EC\uD2B8\uD3F4\uB9AC\uC624\uAC00 \uB429\uB2C8\uB2E4!")
@@ -5753,7 +5803,7 @@ function App() {
       color: C.primary,
       fontWeight: 700
     }
-  }, "\uD83D\uDCC4 PDF \uCD9C\uB825"))))), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDCC4 \uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uBCF4\uAE30"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "14px 14px 0"
     }
@@ -6861,7 +6911,25 @@ function App() {
       transform: showLovecallMgmt ? "rotate(90deg)" : "none",
       transition: "transform .2s"
     }
-  }, "\u203A")), showLovecallMgmt && (() => {
+  }, "\u203A")), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: openLovecallBigScreen,
+    style: {
+      width: "100%",
+      marginTop: 8,
+      padding: "10px",
+      borderRadius: 12,
+      border: `1px solid ${C.g200}`,
+      background: C.white,
+      color: C.navy,
+      fontSize: 13,
+      fontWeight: 700,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6
+    }
+  }, "\uD83D\uDDA5\uFE0F \uC0C8 \uC0BD\uC73C\uB85C \uD06C\uAC8C \uBCF4\uAE30"), showLovecallMgmt && (() => {
     // 학생별 / 기업별 집계
     const studentMap = {};
     const companyMap = {};
